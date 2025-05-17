@@ -1,0 +1,14 @@
+1. Company
+2. Client
+3. Staff
+4. UserActivity
+5. UserInteraction
+6. UserRequest
+7. Category
+8. Product
+9. ProductImage
+10. ProductPrice
+11. Order
+12. OrderItem
+13. Post
+14. PostImage

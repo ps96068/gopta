@@ -1,0 +1,2 @@
+[loging.py:34] - [#INFO    ] - [2024-08-26 19:27:17,146] - [loging.loging] - Message=[Logging is set up to file and console.]
+[srv.py:22] - [#INFO    ] - [2024-08-26 19:27:17,154] - [loging.loging] - Message=[>>> Logging is started <<<]

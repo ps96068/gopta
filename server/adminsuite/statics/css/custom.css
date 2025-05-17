@@ -1,0 +1,29 @@
+/*
+    Custom style
+*/
+
+.avatar-sm {
+    --tblr-avatar-size: 3rem;
+}
+
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 1) !important;
+}
+
+.ps-2 {
+    font-size: 1.2rem;
+}
+
+#sidebar-menu > ul {
+    font-size: 1.0rem;
+}
+
+#sidebar-menu > li > a {
+    font-size: 0.8rem !important;
+    color: white;
+}
+
+/*.dropdown-item {*/
+/*    color: white !important;*/
+/*}*/

@@ -1,0 +1,42 @@
+
+Blog:
+    _blog_listeners_registered
+    'register_all_blog_listeners',
+    'disable_all_blog_listeners',
+    'enable_all_blog_listeners',
+    'get_blog_listeners_status'
+
+Catalog:
+    _catalog_listeners_registered
+    'register_all_catalog_listeners',
+    'disable_all_catalog_listeners',
+    'enable_all_catalog_listeners',
+    'get_catalog_listeners_status',
+
+Marketing:
+    _marketing_listeners_registered
+    'register_all_marketing_listeners',
+    'disable_all_marketing_listeners',
+    'enable_all_marketing_listeners',
+    'get_marketing_listeners_status',
+
+
+Sale:
+    _sale_listeners_registered
+    'register_all_sale_listeners',
+    'disable_all_sale_listeners',
+    'enable_all_sale_listeners',
+    'get_sale_listeners_status',
+
+
+
+User:
+    _user_listeners_registered
+    'register_all_user_listeners',
+    'disable_all_user_listeners',
+    'enable_all_user_listeners',
+    'get_user_listeners_status',
+
+
+
+
