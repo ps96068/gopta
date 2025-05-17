@@ -1,0 +1,14 @@
+
+env/
+env_srv/
+env_starlett/
+env_stralette_cleare/
+env_ver3/
+env_ver3_test1/
+
+/server/05_05_2025/env1/
+
+.idea/
+__pycache__/
+
+
