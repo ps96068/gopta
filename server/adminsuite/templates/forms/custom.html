@@ -1,9 +1,0 @@
-<div class="{%if error%}is-invalid{%endif%}">
-    <input id="{{field.id}}" name="{{field.id}}" ... />
-    {% if field.help_text %}
-    <small class="form-hint">{{field.help_text}}</small>
-    {%endif%}
-</div>
-{%if error %}
-<div class="invalid-feedback">{{error}}</div>
-{%endif%}

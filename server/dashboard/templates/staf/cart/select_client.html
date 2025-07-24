@@ -1,0 +1,211 @@
+<!-- server/dashboard/templates/cart/select_client.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Coș Nou - Selectare Client - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Coș Nou - Pasul 1: Selectare Client{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('error') == 'client_not_found' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Clientul selectat nu a fost găsit!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <!-- Progress -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
+                             style="width: 40px; height: 40px;">
+                            <strong>1</strong>
+                        </div>
+                        <p class="mb-0 mt-2 small">Selectare Client</p>
+                    </div>
+                    <div class="flex-fill">
+                        <hr style="margin-top: 20px;">
+                    </div>
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
+                             style="width: 40px; height: 40px;">
+                            <strong>2</strong>
+                        </div>
+                        <p class="mb-0 mt-2 small text-muted">Selectare Produse</p>
+                    </div>
+                    <div class="flex-fill">
+                        <hr style="margin-top: 20px;">
+                    </div>
+                    <div class="text-center flex-fill">
+                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
+                             style="width: 40px; height: 40px;">
+                            <strong>3</strong>
+                        </div>
+                        <p class="mb-0 mt-2 small text-muted">Finalizare</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-check text-primary me-2"></i>
+                    Selectează Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ dashboard_prefix }}/cart/create">
+                    {{ csrf_input|safe }}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Client *</label>
+
+                        {% if client %}
+                        <!-- Pre-selected client -->
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-{{ client.status.value|lower }} text-white me-3"
+                                     style="width: 50px; height: 50px; font-size: 20px;">
+                                    {{ (client.first_name or 'A')[0] }}{{ (client.last_name or '')[0] }}
+                                </div>
+                                <div>
+                                    <strong>{{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}</strong><br>
+                                    {% if client.email %}{{ client.email }}{% endif %}
+                                    <span class="badge bg-{{ client.status.value|lower }} ms-2">{{ client.status.value }}</span>
+                                </div>
+                            </div>
+                            <input type="hidden" name="client_id" value="{{ client.id }}">
+                        </div>
+                        {% else %}
+                        <!-- Client selection -->
+                        <select name="client_id" class="form-select" id="clientSelect" required>
+                            <option value="">-- Selectează un client --</option>
+                            {% for c in clients %}
+                            <option value="{{ c.id }}"
+                                    data-status="{{ c.status.value }}"
+                                    data-email="{{ c.email or '' }}"
+                                    data-phone="{{ c.phone or '' }}"
+                                    data-orders="{{ client_orders_count[c.id] }}">
+                                {{ c.first_name or 'Anonim' }} {{ c.last_name or '' }}
+                                {% if c.email %}({{ c.email }}){% endif %}
+                                - {{ c.status.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i>
+                            Selectați clientul pentru care doriți să creați un coș de cumpărături.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Client info display -->
+                    <div id="clientInfo" class="d-none mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-3">Informații Client</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Status</small>
+                                        <span class="badge" id="clientStatus"></span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Email</small>
+                                        <span id="clientEmail">-</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted d-block">Telefon</small>
+                                        <span id="clientPhone">-</span>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block">Comenzi anterioare</small>
+                                        <span id="clientOrders" class="badge bg-info">0</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                id="viewClientBtn" style="display: none;">
+                                            <i class="bi bi-person"></i> Vezi Profil
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            Următorul Pas <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('clientSelect')?.addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const clientInfo = document.getElementById('clientInfo');
+
+    if (this.value) {
+        // Show client info
+        clientInfo.classList.remove('d-none');
+
+        // Update status
+        const status = selected.dataset.status;
+        const statusBadge = document.getElementById('clientStatus');
+        statusBadge.textContent = status;
+        statusBadge.className = 'badge bg-' + status.toLowerCase();
+
+        // Update info
+        document.getElementById('clientEmail').textContent = selected.dataset.email || '-';
+        document.getElementById('clientPhone').textContent = selected.dataset.phone || '-';
+        document.getElementById('clientOrders').textContent = selected.dataset.orders || '0';
+
+        // Show view button
+        const viewBtn = document.getElementById('viewClientBtn');
+        viewBtn.style.display = 'inline-block';
+        viewBtn.onclick = () => {
+            window.open(`/dashboard/client/${this.value}`, '_blank');
+        };
+    } else {
+        clientInfo.classList.add('d-none');
+    }
+});
+</script>
+{% endblock %}

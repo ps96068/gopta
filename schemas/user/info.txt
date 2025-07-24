@@ -1,0 +1,22 @@
+Pentru Vendor:
+
+VendorCreate - validare email și nume
+VendorUpdate - toate câmpurile opționale
+VendorResponse - include products_count
+Validare nume rezervate (TEST, DEMO)
+
+==================
+
+Pentru Client:
+
+ClientCreate - crearea din Telegram (minimal)
+ClientUpdate - upgrade ANONIM → USER (validare strictă)
+ClientResponse - returnare date (fără info sensibile)
+Validare telefon moldovenesc (+373)
+
+Pentru Staff:
+
+StaffCreate - cu validare parolă complexă
+StaffLogin - pentru autentificare
+StaffResponse - fără password_hash
+Role implicit SUPERVISOR

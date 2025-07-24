@@ -1,0 +1,162 @@
+<!-- server/dashboard/templates/vend/product/form.html -->
+
+{% extends "base_vendor.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">
+                    {% if product %}Editare Produs{% else %}Produs Nou{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {{ csrf_input|safe }}
+
+                    <!-- Basic Information -->
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-info-circle me-2"></i>Informații de bază
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="name" class="form-label">Nume produs <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   value="{{ product.name if product else '' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="sku" class="form-label">SKU <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="sku" name="sku"
+                                   value="{{ product.sku if product else '' }}" required
+                                   {% if product %}readonly{% endif %}>
+                            {% if product %}
+                                <small class="text-muted">SKU nu poate fi modificat</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="slug" class="form-label">URL Slug</label>
+                            <input type="text" class="form-control" id="slug" name="slug"
+                                   value="{{ product.slug if product else '' }}"
+                                   placeholder="Se generează automat din nume">
+                            <small class="text-muted">Lăsați gol pentru generare automată</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="category_id" class="form-label">Categorie <span class="text-danger">*</span></label>
+                            <select class="form-select" id="category_id" name="category_id" required>
+                                <option value="">Selectați categoria</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}"
+                                            {% if product and product.category_id == category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <h6 class="text-primary mb-3 mt-4">
+                        <i class="bi bi-text-left me-2"></i>Descriere
+                    </h6>
+
+                    <div class="mb-3">
+                        <label for="short_description" class="form-label">Descriere scurtă</label>
+                        <textarea class="form-control" id="short_description" name="short_description"
+                                  rows="2" maxlength="500">{{ product.short_description if product else '' }}</textarea>
+                        <small class="text-muted">Max 500 caractere. Apare în listări.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Descriere completă</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="5">{{ product.description if product else '' }}</textarea>
+                    </div>
+
+                    <!-- Settings -->
+                    <h6 class="text-primary mb-3 mt-4">
+                        <i class="bi bi-gear me-2"></i>Setări
+                    </h6>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label for="sort_order" class="form-label">Ordine afișare</label>
+                            <input type="number" class="form-control" id="sort_order" name="sort_order"
+                                   value="{{ product.sort_order if product else 0 }}" min="0">
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="is_active"
+                                       name="is_active" value="true"
+                                       {% if not product or product.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Produs activ
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if product %}
+                        <!-- Prices Section - Only for existing products -->
+                        <h6 class="text-primary mb-3 mt-4">
+                            <i class="bi bi-currency-dollar me-2"></i>Prețuri
+                        </h6>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Prețurile se gestionează separat după crearea produsului.
+                            <a href="{{ dashboard_prefix }}/product/{{ product.id }}" class="alert-link">
+                                Vezi detalii produs
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            După crearea produsului, veți putea adăuga imagini și seta prețurile.
+                        </div>
+                    {% endif %}
+
+                    <!-- Form actions -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ dashboard_prefix }}/product" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Înapoi
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            {% if product %}
+                                <i class="bi bi-save me-2"></i>Salvează modificări
+                            {% else %}
+                                <i class="bi bi-plus-circle me-2"></i>Creează produs
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-generate slug from name
+    document.getElementById('name').addEventListener('blur', function() {
+        const slugField = document.getElementById('slug');
+        if (!slugField.value && this.value) {
+            // Simple slug generation
+            slugField.value = this.value
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+    });
+
+    // Validate SKU format
+    document.getElementById('sku').addEventListener('input', function() {
+        // Remove spaces and special characters
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    });
+</script>
+{% endblock %}

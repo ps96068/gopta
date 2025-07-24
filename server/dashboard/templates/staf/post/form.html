@@ -1,0 +1,568 @@
+<!-- server/dashboard/templates/staf/post/form.html -->
+
+{% extends "base_staff.html" %}
+
+{% block title %}{% if action == 'create' %}Articol Nou{% else %}Editare: {{ post.title }}{% endif %} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}
+{% if action == 'create' %}
+    <i class="bi bi-plus-circle me-2"></i>Articol Nou
+{% else %}
+    <i class="bi bi-pencil me-2"></i>Editare Articol
+{% endif %}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('post_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Înapoi la listă
+    </a>
+
+    {% if action == 'edit' %}
+    <a href="{{ url_for('post_preview', post_id=post.id) }}"
+       class="btn btn-outline-primary"
+       target="_blank">
+        <i class="bi bi-eye me-1"></i>Preview
+    </a>
+    {% endif %}
+
+    <button type="submit" form="postForm" class="btn btn-primary">
+        <i class="bi bi-check-circle me-1"></i>
+        {% if action == 'create' %}Creează Articol{% else %}Salvează Modificări{% endif %}
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Success/Error Messages -->
+{% if success == 'created' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Articol creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif success == 'updated' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Articol actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif success == 'image_uploaded' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Imagine încărcată cu succes! Acum o puteți selecta din galerie.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle me-1"></i>A apărut o eroare! Vă rugăm încercați din nou.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<form method="POST"
+      action="{% if action == 'create' %}{{ url_for('post_create') }}{% else %}{{ url_for('post_update', post_id=post.id) }}{% endif %}"
+      enctype="multipart/form-data"
+      id="postForm">
+    {{ csrf_input | safe }}
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Conținut Articol</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Title -->
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Titlu <span class="text-danger">*</span></label>
+                        <input type="text"
+                               class="form-control form-control-lg"
+                               id="title"
+                               name="title"
+                               value="{{ post.title if post else '' }}"
+                               required
+                               placeholder="Introduceți titlul articolului">
+                        <div class="form-text">Titlul va fi folosit pentru generarea slug-ului</div>
+                    </div>
+
+                    <!-- Excerpt -->
+                    <div class="mb-3">
+                        <label for="excerpt" class="form-label">Rezumat</label>
+                        <textarea class="form-control"
+                                  id="excerpt"
+                                  name="excerpt"
+                                  rows="3"
+                                  placeholder="Scurt rezumat al articolului (opțional)">{{ post.excerpt if post else '' }}</textarea>
+                        <div class="form-text">Maxim 500 caractere. Apare în listări.</div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="mb-3">
+                        <label for="content" class="form-label">Conținut <span class="text-danger">*</span></label>
+                        <textarea class="form-control"
+                                  id="content"
+                                  name="content"
+                                  rows="15">{{ post.content if post else '' }}</textarea>
+                    </div>
+
+                    {% if action == 'edit' and post.content_images %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Acest articol are {{ post.content_images|length }} imagini în conținut.
+                        <a href="{{ url_for('post_images_list', post_id=post.id) }}" class="alert-link">
+                            Gestionează imagini
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- SEO Settings -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">SEO</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="meta_title" class="form-label">
+                            Meta Title <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="meta_title"
+                               name="meta_title"
+                               value="{{ post.meta_title if post else '' }}"
+                               required
+                               placeholder="Titlu pentru motoare de căutare">
+                        <div class="form-text">Maxim 60 caractere</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="meta_description" class="form-label">
+                            Meta Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control"
+                                  id="meta_description"
+                                  name="meta_description"
+                                  rows="3"
+                                  required
+                                  placeholder="Descriere pentru motoare de căutare">{{ post.meta_description if post else '' }}</textarea>
+                        <div class="form-text">Maxim 160 caractere</div>
+                    </div>
+
+                    {% if action == 'edit' %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="regenerate_slug"
+                                   name="regenerate_slug"
+                                   value="true">
+                            <label class="form-check-label" for="regenerate_slug">
+                                Regenerează slug din titlu
+                            </label>
+                        </div>
+                        <div class="form-text">Slug actual: <code>{{ post.slug }}</code></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Featured Image -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Imagine Principală</h5>
+                </div>
+                <div class="card-body">
+                    {% if action == 'edit' and post.featured_image %}
+                    <div class="mb-3">
+                        <img src="/{{ post.featured_image.image_path }}"
+                             class="img-fluid rounded"
+                             alt="{{ post.featured_image.alt_text }}">
+                        <div class="form-text mt-2">Imaginea actuală</div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="featured_image" class="form-label">
+                            {% if action == 'edit' and post.featured_image %}
+                                Înlocuiește imaginea
+                            {% else %}
+                                Încarcă imagine
+                            {% endif %}
+                        </label>
+                        <input type="file"
+                               class="form-control"
+                               id="featured_image"
+                               name="featured_image"
+                               accept=".jpg,.jpeg,.png">
+                        <div class="form-text">JPG, PNG. Max 2MB. Dacă nu încărcați, se va folosi imaginea implicită.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Setări</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="is_featured"
+                                   name="is_featured"
+                                   value="true"
+                                   {% if post and post.is_featured %}checked{% endif %}>
+                            <label class="form-check-label" for="is_featured">
+                                <i class="bi bi-star-fill text-warning"></i> Articol Featured
+                            </label>
+                        </div>
+                        <div class="form-text">Apare evidențiat pe pagina principală</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="is_active"
+                                   name="is_active"
+                                   value="true"
+                                   {% if post and post.is_active %}checked{% endif %}
+                                   {% if staff.role.value != 'super_admin' %}disabled{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                <i class="bi bi-globe"></i> Publicat
+                            </label>
+                        </div>
+                        {% if staff.role.value != 'super_admin' %}
+                        <div class="form-text text-warning">
+                            <i class="bi bi-info-circle"></i> Doar Super Admin poate publica articole
+                        </div>
+                        {% else %}
+                        <div class="form-text">Articolul va fi vizibil public</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info -->
+            {% if action == 'edit' %}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">Informații</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Autor:</dt>
+                        <dd>{{ post.author.first_name }} {{ post.author.last_name }}</dd>
+
+                        <dt>Creat:</dt>
+                        <dd>{{ post.created_at|datetime_local }}</dd>
+
+                        <dt>Ultima modificare:</dt>
+                        <dd>{{ post.updated_at|datetime_local }}</dd>
+
+                        <dt>Vizualizări:</dt>
+                        <dd>{{ post.view_count }}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('post_list') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Anulează
+                </a>
+
+                <div>
+                    {% if action == 'edit' %}
+                    <a href="{{ url_for('post_preview', post_id=post.id) }}"
+                       class="btn btn-outline-primary me-2"
+                       target="_blank">
+                        <i class="bi bi-eye me-1"></i>Preview
+                    </a>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>
+                        {% if action == 'create' %}Creează Articol{% else %}Salvează Modificări{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/tinymce@6/skins/ui/oxide/skin.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
+<script>
+// Get CSRF token from cookie
+function getCSRFToken() {
+    const name = "csrf_token=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+// Initialize TinyMCE
+tinymce.init({
+    selector: '#content',
+    height: 500,
+    menubar: false,
+    plugins: [
+        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+        'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
+    ],
+    toolbar: 'undo redo | blocks | ' +
+        'bold italic backcolor | alignleft aligncenter ' +
+        'alignright alignjustify | bullist numlist outdent indent | ' +
+        'removeformat | link gallery | code | help',
+    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+    setup: function(editor) {
+        // Store reference to current editor globally
+        window.currentTinyMCEEditor = editor;
+
+        // Adaugă buton pentru galerie imagini
+        editor.ui.registry.addButton('gallery', {
+            text: 'GI',
+            icon: 'gallery',
+            tooltip: 'Inserează imagine din galeria articolului',
+            onAction: function() {
+                {% if action == 'create' %}
+                    // Pentru articole noi, afișăm doar dialog de upload
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                editor.insertContent(`<img src="${e.target.result}" class="img-fluid" alt="" />`);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+                    input.click();
+                {% else %}
+                    // Deschide modal cu galeria de imagini
+                    openImageGalleryModal(editor);
+                {% endif %}
+            }
+        });
+
+        // Sincronizează conținutul TinyMCE cu textarea înainte de submit
+        editor.on('submit', function() {
+            editor.save();
+        });
+
+        // Pentru validare formular
+        const form = document.getElementById('postForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Actualizează textarea cu conținutul din TinyMCE
+                editor.save();
+
+                // Verifică dacă conținutul este gol
+                const content = editor.getContent({format: 'text'}).trim();
+                if (!content) {
+                    e.preventDefault();
+                    alert('Vă rugăm să completați conținutul articolului.');
+                    editor.focus();
+                    return false;
+                }
+            });
+        }
+    },
+    {% if action == 'edit' %}
+    images_upload_handler: function (blobInfo, progress) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('image', blobInfo.blob(), blobInfo.filename());
+            formData.append('alt_text', 'Imagine conținut');
+            formData.append('is_featured', 'false');
+
+            fetch(`/dashboard/staff/post_image/{{ post.id }}/upload`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-Token': getCSRFToken()
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Upload failed');
+                // Reload to see the new image in gallery
+                window.location.reload();
+            })
+            .catch((error) => {
+                reject('Eroare la încărcare: ' + error.message);
+            });
+        });
+    }
+    {% endif %}
+});
+
+{% if action == 'edit' %}
+// Funcție pentru deschiderea galeriei de imagini
+function openImageGalleryModal(editor) {
+    // Creează modalul
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'imageGalleryModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Selectează imagine din galerie</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Se încarcă...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                    <button type="button" class="btn btn-primary" id="insertSelectedImage" disabled>
+                        Inserează imagine selectată
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Inițializează și arată modalul
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+
+    // Încarcă galeria
+    fetch(`/dashboard/staff/post_image/gallery/{{ post.id }}`)
+        .then(response => response.text())
+        .then(html => {
+            modal.querySelector('.modal-body').innerHTML = html;
+
+            // Adaugă event listeners pentru selectarea imaginilor
+            initializeGallerySelection(modal, editor, bsModal);
+        })
+        .catch(error => {
+            modal.querySelector('.modal-body').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Eroare la încărcarea galeriei
+                </div>
+            `;
+        });
+
+    // Cleanup când se închide modalul
+    modal.addEventListener('hidden.bs.modal', function() {
+        modal.remove();
+    });
+}
+
+// Inițializează selecția din galerie
+function initializeGallerySelection(modal, editor, bsModal) {
+    let selectedImage = null;
+    const insertBtn = modal.querySelector('#insertSelectedImage');
+
+    // Event pentru selectarea imaginilor
+    modal.querySelectorAll('.image-select-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Deselectează toate
+            modal.querySelectorAll('.image-select-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+
+            // Selectează aceasta
+            this.classList.add('selected');
+            selectedImage = {
+                url: this.dataset.imageUrl,
+                alt: this.dataset.imageAlt || '',
+                caption: this.dataset.imageCaption || ''
+            };
+
+            // Activează butonul și salvează datele selectate
+            insertBtn.disabled = false;
+            insertBtn.dataset.imageUrl = selectedImage.url;
+            insertBtn.dataset.imageAlt = selectedImage.alt;
+            insertBtn.dataset.imageCaption = selectedImage.caption;
+        });
+    });
+
+    // Event pentru inserare
+    insertBtn.addEventListener('click', function() {
+        if (selectedImage && selectedImage.url) {
+            // Construiește HTML pentru imagine
+            let imageHtml = `<img src="${selectedImage.url}" alt="${selectedImage.alt}" class="img-fluid" />`;
+
+            // Adaugă caption dacă există
+            if (selectedImage.caption) {
+                imageHtml = `
+                    <figure class="figure">
+                        ${imageHtml}
+                        <figcaption class="figure-caption text-center">${selectedImage.caption}</figcaption>
+                    </figure>
+                `;
+            }
+
+            // Inserează în editor
+            editor.insertContent(imageHtml);
+
+            // Închide modalul
+            bsModal.hide();
+        }
+    });
+}
+
+// Make it globally accessible
+window.initializeGallerySelection = initializeGallerySelection;
+{% endif %}
+
+// Character counters
+document.getElementById('meta_title').addEventListener('input', function() {
+    const length = this.value.length;
+    const hint = this.nextElementSibling;
+    hint.textContent = `${length}/60 caractere`;
+    hint.classList.toggle('text-danger', length > 60);
+});
+
+document.getElementById('meta_description').addEventListener('input', function() {
+    const length = this.value.length;
+    const hint = this.nextElementSibling;
+    hint.textContent = `${length}/160 caractere`;
+    hint.classList.toggle('text-danger', length > 160);
+});
+
+document.getElementById('excerpt').addEventListener('input', function() {
+    const length = this.value.length;
+    const hint = this.nextElementSibling;
+    hint.textContent = `${length}/500 caractere`;
+    hint.classList.toggle('text-danger', length > 500);
+});
+</script>
+{% endblock %}

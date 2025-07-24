@@ -1,3 +1,5 @@
+# cfg/srv/srv_cfg.py
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,69 +30,83 @@ class SrvSettings(BaseSettings):
     secret_key2: str
     algorithm: str
     access_token_expire_minutes: int
+    admin_base_url1: str
+    admin_base_url2: str
 
-    # @field_validator('company', mode='after', check_fields=True)
-    # def validate_company(cls, v: str) -> str:
-    #     if len(v) == 0:
-    #         raise ValueError("company name must be specified.")
-    #     return v
 
     @field_validator('admin_tg_id', mode='after', check_fields=True)
+    @classmethod
     def validate_admin_id(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("Admin telegram ID must be specified.")
         return v
 
     @field_validator('admin_user', mode='after', check_fields=True)
+    @classmethod
     def validate_admin_user(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("Admin user must be specified.")
         return v
 
     @field_validator('admin_email', mode='after', check_fields=True)
+    @classmethod
     def validate_admin_email(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("Admin email must be specified.")
         return v
 
     @field_validator('admin_phone', mode='after', check_fields=True)
+    @classmethod
     def validate_admin_phone(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("Admin phone must be specified.")
         return v
 
     @field_validator('admin_password', mode='after', check_fields=True)
+    @classmethod
     def validate_admin_password(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("Admin password must be specified.")
         return v
 
     @field_validator('secret_key', mode='after', check_fields=True)
+    @classmethod
     def validate_secret_key(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("secret_key must be specified.")
         return v
 
     @field_validator('secret_key1', mode='after', check_fields=True)
+    @classmethod
     def validate_secret_key1(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("secret_key1 must be specified.")
         return v
 
     @field_validator('secret_key2', mode='after', check_fields=True)
+    @classmethod
     def validate_secret_key2(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("secret_key2 must be specified.")
         return v
 
     @field_validator('algorithm', mode='after', check_fields=True)
+    @classmethod
     def validate_algorithm(cls, v: str) -> str:
         if len(v) == 0:
             raise ValueError("algorithm must be specified.")
         return v
 
     @field_validator('access_token_expire_minutes', mode='after', check_fields=True)
+    @classmethod
     def validate_access_token_expire_minutes(cls, v: str) -> str:
         if not v:
             raise ValueError("access_token_expire_minutes must be specified.")
+        return v
+
+    @field_validator('admin_base_url1', 'admin_base_url2', mode='after', check_fields=True)
+    @classmethod
+    def validate_admin_base_url(cls, v: str) -> str:
+        if len(v) == 0:
+            raise ValueError("Admin path must be specified.")
         return v

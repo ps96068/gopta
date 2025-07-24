@@ -1,0 +1,498 @@
+<!-- server/dashboard/templates/staff/order/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Comandă #{{ order.order_number }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Comandă #{{ order.order_number }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/order" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi la Listă
+    </a>
+    {% if order.invoice %}
+    <a href="{{ dashboard_prefix }}/invoice/{{ order.invoice.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-receipt"></i> Vezi Factură
+    </a>
+    {% endif %}
+    <button class="btn btn-sm btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Comandă creată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Comandă actualizată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Left Column - Order Details -->
+    <div class="col-lg-8">
+        <!-- Order Items -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    Produse Comandate ({{ order.items|length }})
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Produs</th>
+                                <th width="100" class="text-center">Cantitate</th>
+                                <th width="120" class="text-end">Preț Unit.</th>
+                                <th width="120" class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <a href="{{ dashboard_prefix }}/product/{{ item.product_id }}"
+                                           class="text-decoration-none">
+                                            <strong>{{ item.product_name }}</strong>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted">
+                                            SKU: {{ item.product_sku }} |
+                                            Preț: {{ item.price_type }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ item.quantity }}</span>
+                                </td>
+                                <td class="text-end">
+                                    {{ item.unit_price|int }} MDL
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ item.subtotal|int }} MDL</strong>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-light">
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    <strong>TOTAL:</strong>
+                                </td>
+                                <td class="text-end">
+                                    <h5 class="mb-0 text-success">{{ order.total_amount|int }} MDL</h5>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Timeline -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history text-info me-2"></i>
+                    Istoric Comandă
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <!-- Current Status -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Status Curent: {{ order.status.value|title }}</h6>
+                            <p class="mb-0 text-muted">
+                                <i class="bi bi-clock"></i> Actualizat: {{ order.updated_at|datetime_local }}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if order.processed_at %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Procesată</h6>
+                            <p class="mb-0 text-muted">
+                                <i class="bi bi-person"></i> {{ order.processed_by.first_name }} {{ order.processed_by.last_name }}<br>
+                                <i class="bi bi-clock"></i> {{ order.processed_at|datetime_local }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Comandă Creată</h6>
+                            <p class="mb-0 text-muted">
+                                <i class="bi bi-clock"></i> {{ order.created_at|datetime_local }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Order Info & Actions -->
+    <div class="col-lg-4">
+        <!-- Order Status & Actions -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle text-primary me-2"></i>
+                    Status & Acțiuni
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if order.status.value == 'new' %}
+                        <div class="badge bg-warning fs-6 p-3">
+                            <i class="bi bi-clock"></i> COMANDĂ NOUĂ
+                        </div>
+                    {% elif order.status.value == 'processing' %}
+                        <div class="badge bg-info fs-6 p-3">
+                            <i class="bi bi-arrow-repeat"></i> ÎN PROCESARE
+                        </div>
+                    {% elif order.status.value == 'completed' %}
+                        <div class="badge bg-success fs-6 p-3">
+                            <i class="bi bi-check-circle"></i> FINALIZATĂ
+                        </div>
+                    {% elif order.status.value == 'cancelled' %}
+                        <div class="badge bg-danger fs-6 p-3">
+                            <i class="bi bi-x-circle"></i> ANULATĂ
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if can_update(staff, 'order') %}
+                    {% if order.status.value == 'new' %}
+                    <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/process" class="mb-2">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="bi bi-arrow-right-circle"></i> Procesează Comanda
+                        </button>
+                    </form>
+                    {% elif order.status.value == 'processing' %}
+                    <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/complete" class="mb-2">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-circle"></i> Marchează ca Finalizată
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if order.status.value in ['new', 'processing'] %}
+                    <button class="btn btn-danger w-100" onclick="showCancelModal()">
+                        <i class="bi bi-x-circle"></i> Anulează Comanda
+                    </button>
+                    {% endif %}
+
+
+
+
+
+
+<!--                    {% if not order.invoice and order.status.value in ['processing', 'completed'] %}-->
+<!--                    <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/generate-invoice" class="mt-2">-->
+<!--                        {{ csrf_input|safe }}-->
+<!--                        <button type="submit" class="btn btn-primary w-100">-->
+<!--                            <i class="bi bi-receipt"></i> Generează Factură-->
+<!--                        </button>-->
+<!--                    </form>-->
+<!--                    {% endif %}-->
+
+                {% if not order.invoice and order.status.value in ['processing', 'completed'] and can_create(user, 'invoice') %}
+                    <hr class="my-3">
+                    <button type="button" class="btn btn-primary w-100"
+                            data-bs-toggle="modal" data-bs-target="#generateInvoiceModal">
+                        <i class="bi bi-receipt"></i> Generează Factură
+                    </button>
+                    {% endif %}
+
+                    {% if order.invoice %}
+                    <hr class="my-3">
+                    <div class="d-grid">
+                        <a href="{{ dashboard_prefix }}/invoice/{{ order.invoice.id }}"
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-receipt"></i> Vezi Factură
+                        </a>
+                    </div>
+                    {% endif %}
+
+
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Client Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-info me-2"></i>
+                    Informații Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-circle bg-{{ order.client.status.value|lower }} text-white mx-auto mb-2"
+                         style="width: 60px; height: 60px; font-size: 24px;">
+                        {{ (order.client.first_name or 'A')[0] }}{{ (order.client.last_name or '')[0] }}
+                    </div>
+                    <h6>{{ order.client.first_name or 'Anonim' }} {{ order.client.last_name or '' }}</h6>
+                    <span class="badge bg-{{ order.client.status.value|lower }}">
+                        {{ order.client.status.value }}
+                    </span>
+                </div>
+
+                <dl class="row mb-0">
+                    {% if order.client.email %}
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">{{ order.client.email }}</dd>
+                    {% endif %}
+
+                    {% if order.client.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">{{ order.client.phone }}</dd>
+                    {% endif %}
+
+                    <dt class="col-5">Telegram ID:</dt>
+                    <dd class="col-7">{{ order.client.telegram_id }}</dd>
+                </dl>
+
+                <div class="d-grid mt-3">
+                    <a href="{{ dashboard_prefix }}/client/{{ order.client.id }}"
+                       class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-person"></i> Vezi Profil Client
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-text text-warning me-2"></i>
+                    Note
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if order.client_note %}
+                <div class="mb-3">
+                    <h6>Notă Client:</h6>
+                    <p class="mb-0 text-muted">{{ order.client_note }}</p>
+                </div>
+                <hr>
+                {% endif %}
+
+                {% if order.staff_note %}
+                <div class="mb-3">
+                    <h6>Notă Staff:</h6>
+                    <p class="mb-0 text-muted">{{ order.staff_note }}</p>
+                </div>
+                {% else %}
+                <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/add-note">
+                    {{ csrf_input|safe }}
+                    <div class="mb-2">
+                        <textarea name="staff_note" class="form-control" rows="3"
+                                  placeholder="Adaugă notă internă..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-warning">
+                        <i class="bi bi-plus"></i> Adaugă Notă
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/cancel">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle text-danger"></i> Anulare Comandă
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Sigur doriți să anulați comanda <strong>#{{ order.order_number }}</strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Această acțiune nu poate fi anulată!
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Motiv anulare *</label>
+                        <textarea name="reason" class="form-control" rows="3" required
+                                  placeholder="Specificați motivul anulării..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Închide
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Anulează Comanda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal pentru generare factură -->
+{% if not order.invoice and order.status.value in ['processing', 'completed'] and can_create(user, 'invoice') %}
+<div class="modal fade" id="generateInvoiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ dashboard_prefix }}/invoice/invoice/generate">
+                {{ csrf_input|safe }}
+                <input type="hidden" name="order_id" value="{{ order.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt text-primary"></i> Generează Factură
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Se va genera factură pentru comanda <strong>#{{ order.order_number }}</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Note/Observații (opțional)</label>
+                        <textarea name="notes" class="form-control" rows="3"
+                                  placeholder="Informații suplimentare pentru factură..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trimite automat?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="send_email" id="sendEmailInvoice"
+                                   {% if order.client.email %}checked{% endif %}
+                                   {% if not order.client.email %}disabled{% endif %}>
+                            <label class="form-check-label" for="sendEmailInvoice">
+                                <i class="bi bi-envelope"></i> Trimite pe email
+                                {% if order.client.email %}
+                                ({{ order.client.email }})
+                                {% else %}
+                                <span class="text-muted">(clientul nu are email)</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="send_telegram" id="sendTelegramInvoice"
+                                   {% if order.client.telegram_id %}checked{% endif %}>
+                            <label class="form-check-label" for="sendTelegramInvoice">
+                                <i class="bi bi-telegram"></i> Trimite pe Telegram
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Generează Factură
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+/* Timeline styles */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 20px;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -25px;
+    top: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+/* Print styles */
+@media print {
+    .btn, .modal, .alert {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCancelModal() {
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

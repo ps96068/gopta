@@ -1,0 +1,439 @@
+<!-- server/dashboard/templates/product_price/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Prețuri Produse - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Prețuri Produse{% endblock %}
+
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-warning" onclick="toggleBulkEdit()">
+        <i class="bi bi-pencil-square"></i> Editare în Masă
+    </button>
+    <a href="{{ dashboard_prefix }}/export?model=product_price" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Alerts -->
+<div id="bulkUpdateAlert" class="alert alert-info alert-dismissible fade show" style="display: none;">
+    <i class="bi bi-info-circle me-2"></i>
+    <span id="bulkUpdateMessage"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Categorie</label>
+                <select name="category_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Toate categoriile</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Furnizor</label>
+                <select name="vendor_company_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">Toți furnizorii</option>
+                    {% for vendor in vendors %}
+                    <option value="{{ vendor.id }}" {% if vendor_filter == vendor.id %}selected{% endif %}>
+                        {{ vendor.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Căutare</label>
+                <input type="search" name="search" class="form-control"
+                       placeholder="Nume produs sau SKU..."
+                       value="{{ search_query or '' }}">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Caută
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Price Grid -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-currency-dollar text-success me-2"></i>
+                Grila de Prețuri
+            </h5>
+            <div id="bulkActions" style="display: none;">
+                <button type="button" class="btn btn-sm btn-success" onclick="saveBulkChanges()">
+                    <i class="bi bi-check-circle"></i> Salvează Modificări
+                </button>
+                <button type="button" class="btn btn-sm btn-light" onclick="cancelBulkEdit()">
+                    <i class="bi bi-x-circle"></i> Anulează
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="priceTable">
+                <thead class="bg-light sticky-top">
+                    <tr>
+                        <th>SKU</th>
+                        <th>Produs</th>
+                        <th>Categorie</th>
+                        {% for price_type in price_types %}
+                        <th class="text-center">
+                            <span class="badge bg-{{ price_type.value }}">
+                                {{ price_type.value|upper }}
+                            </span>
+                        </th>
+                        {% endfor %}
+                        <th class="text-center">Status</th>
+                        <th width="100">Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    {% set product_price_data = product_prices[product.id] %}
+
+                    <!-- FIX PRINCIPAL: Calculare corectă has_inactive -->
+                    {% set inactive_count = 0 %}
+                    {% for price_type, price_data in product_price_data.items() %}
+                        {% if price_data and price_data.is_active == false %}
+                            {% set inactive_count = inactive_count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set has_inactive = inactive_count > 0 %}
+
+                    <tr data-product-id="{{ product.id }}"
+                        class="{% if has_inactive %}table-warning{% endif %}"
+                        data-has-inactive="{{ 'true' if has_inactive else 'false' }}">
+                        <td><code>{{ product.sku }}</code></td>
+                        <td>
+                            <a href="{{ dashboard_prefix }}/product/{{ product.id }}"
+                               class="text-decoration-none">
+                                {{ product.name }}
+                            </a>
+                            <!-- DEBUG INFO TEMPORAR - șterge după test -->
+                            {% if inactive_count > 0 %}
+                                <br><small class="text-warning">
+                                    🔍 Debug: {{ inactive_count }} prețuri inactive găsite
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ product.category.name }}</small>
+                        </td>
+                        {% for price_type in price_types %}
+                        <td class="text-center price-cell" data-price-type="{{ price_type.value }}">
+                            {% set price_data = product_price_data.get(price_type.value) %}
+                            {% if price_data %}
+                                <span class="price-display {% if not price_data.is_active %}text-muted{% endif %}">
+                                    {{ price_data.amount|int }} MDL
+                                    {% if not price_data.is_active %}
+                                        <i class="bi bi-exclamation-triangle text-warning ms-1"
+                                           title="Preț inactiv"></i>
+                                    {% endif %}
+                                </span>
+                                <input type="number"
+                                       class="form-control form-control-sm price-input"
+                                       value="{{ price_data.amount|int }}"
+                                       min="0"
+                                       step="1"
+                                       {% if not price_data.is_active %}disabled{% endif %}
+                                       style="display: none; width: 100px; margin: 0 auto;">
+                            {% else %}
+                                <span class="price-display text-muted">0 MDL</span>
+                                <input type="number"
+                                       class="form-control form-control-sm price-input"
+                                       value="0"
+                                       min="0"
+                                       step="1"
+                                       style="display: none; width: 100px; margin: 0 auto;">
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center">
+                            {% if has_inactive %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>{{ inactive_count }} Inactive
+                                </span>
+                            {% elif not product.vendor_company.is_active %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-building-x me-1"></i>Companie Inactivă
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>Activ
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ dashboard_prefix }}/product_price/product/{{ product.id }}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 6 + price_types|length }}" class="text-center py-4 text-muted">
+                            <i class="bi bi-currency-dollar fs-1"></i>
+                            <p class="mt-2">Nu sunt produse</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if vendor_filter %}&vendor_company_id={{ vendor_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if vendor_filter %}&vendor_company_id={{ vendor_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if vendor_filter %}&vendor_company_id={{ vendor_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+.price-cell {
+    position: relative;
+}
+
+.price-input {
+    margin: 0 auto;
+}
+
+#priceTable.edit-mode .price-display {
+    display: none !important;
+}
+
+#priceTable.edit-mode .price-input {
+    display: block !important;
+}
+
+.price-cell.modified input {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+}
+
+thead.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+}
+
+/* Stiluri pentru rândurile cu prețuri inactive */
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.price-input:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isEditMode = false;
+let modifiedPrices = new Map();
+
+function toggleBulkEdit() {
+    isEditMode = !isEditMode;
+    const table = document.getElementById('priceTable');
+    const bulkActions = document.getElementById('bulkActions');
+
+    if (isEditMode) {
+        table.classList.add('edit-mode');
+        bulkActions.style.display = 'block';
+
+        // Track changes - doar pentru input-urile care nu sunt disabled
+        document.querySelectorAll('.price-input:not(:disabled)').forEach(input => {
+            input.addEventListener('change', trackChange);
+        });
+    } else {
+        table.classList.remove('edit-mode');
+        bulkActions.style.display = 'none';
+        cancelBulkEdit();
+    }
+}
+
+function trackChange(event) {
+    const input = event.target;
+
+    // Verifică dacă input-ul este disabled
+    if (input.disabled) {
+        return;
+    }
+
+    const cell = input.closest('.price-cell');
+    const row = input.closest('tr');
+    const productId = row.dataset.productId;
+    const priceType = cell.dataset.priceType;
+    const value = parseFloat(input.value) || 0;
+
+    // Nu permite modificarea dacă rândul are prețuri inactive
+    if (row.dataset.hasInactive === 'true') {
+        input.value = parseInt(cell.querySelector('.price-display').textContent);
+        alert('Nu se pot modifica prețurile pentru produse cu prețuri inactive!');
+        return;
+    }
+
+    // Mark as modified
+    cell.classList.add('modified');
+
+    // Store change
+    const key = `${productId}-${priceType}`;
+    modifiedPrices.set(key, {
+        product_id: productId,
+        price_type: priceType,
+        amount: value
+    });
+}
+
+function cancelBulkEdit() {
+    // Reset all inputs
+    document.querySelectorAll('.price-cell.modified').forEach(cell => {
+        cell.classList.remove('modified');
+        const input = cell.querySelector('.price-input');
+        const display = cell.querySelector('.price-display');
+        input.value = parseInt(display.textContent);
+    });
+
+    modifiedPrices.clear();
+    toggleBulkEdit();
+}
+
+async function saveBulkChanges() {
+    if (modifiedPrices.size === 0) {
+        alert('Nu sunt modificări de salvat');
+        return;
+    }
+
+    const updates = Array.from(modifiedPrices.values());
+
+    try {
+        const response = await fetch('/dashboard/staff/product_price/bulk-update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ updates })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Update displays
+            modifiedPrices.forEach((data, key) => {
+                const [productId, priceType] = key.split('-');
+                const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+                const cell = row.querySelector(`.price-cell[data-price-type="${priceType}"]`);
+                const display = cell.querySelector('.price-display');
+                display.textContent = `${data.amount} MDL`;
+                cell.classList.remove('modified');
+            });
+
+            // Show success message
+            const alert = document.getElementById('bulkUpdateAlert');
+            const message = document.getElementById('bulkUpdateMessage');
+            message.textContent = `${result.updated} prețuri actualizate cu succes!`;
+
+            if (result.errors && result.errors.length > 0) {
+                message.textContent += ` (${result.errors.length} erori)`;
+            }
+
+            alert.style.display = 'block';
+            alert.classList.remove('alert-info');
+            alert.classList.add(result.success ? 'alert-success' : 'alert-warning');
+
+            // Clear and exit edit mode
+            modifiedPrices.clear();
+            toggleBulkEdit();
+        } else {
+            alert('Eroare la salvare: ' + result.error);
+        }
+    } catch (error) {
+        alert('Eroare la salvare: ' + error.message);
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (isEditMode) {
+        if (e.ctrlKey && e.key === 's') {
+            e.preventDefault();
+            saveBulkChanges();
+        }
+        if (e.key === 'Escape') {
+            cancelBulkEdit();
+        }
+    }
+});
+</script>
+{% endblock %}
+
+

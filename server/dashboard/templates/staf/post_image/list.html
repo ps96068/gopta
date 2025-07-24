@@ -1,0 +1,412 @@
+<!-- server/dashboard/templates/staf/post_image/list.html -->
+
+{% extends "base_staff.html" %}
+
+{% block title %}Imagini: {{ post.title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Imagini Articol{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('post_edit_form', post_id=post.id) }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Înapoi la articol
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Article Info -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="mb-0">{{ post.title }}</h5>
+        <small class="text-muted">
+            Autor: {{ post.author.first_name }} {{ post.author.last_name }} |
+            Creat: {{ post.created_at|date_only }}
+        </small>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if success == 'uploaded' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Imagine încărcată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif success == 'deleted' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Imagine ștearsă cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif error == 'limit' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle me-1"></i>Limita de 5 imagini pentru conținut a fost atinsă!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% elif error == 'upload' %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle me-1"></i>Eroare la încărcarea imaginii!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Featured Image Section -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="mb-0">
+                    <i class="bi bi-star-fill text-warning"></i> Imagine Principală (Featured)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if featured_image %}
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <img src="/{{ featured_image.image_path }}"
+                             class="img-fluid rounded shadow-sm"
+                             alt="{{ featured_image.alt_text }}">
+                    </div>
+                    <div class="col-md-8">
+                        <h6>{{ featured_image.file_name }}</h6>
+                        <p class="text-muted mb-2">
+                            Dimensiune: {{ (featured_image.file_size / 1024)|round(1) }} KB<br>
+                            Încărcat: {{ featured_image.created_at|datetime_local }}
+                        </p>
+
+                        <form class="mb-3" id="featuredForm">
+                            {{ csrf_input | safe }}
+                            <div class="mb-2">
+                                <label class="form-label">Text alternativ</label>
+                                <input type="text"
+                                       class="form-control"
+                                       name="alt_text"
+                                       value="{{ featured_image.alt_text or '' }}"
+                                       placeholder="Descriere pentru SEO și accesibilitate">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Legendă</label>
+                                <input type="text"
+                                       class="form-control"
+                                       name="caption"
+                                       value="{{ featured_image.caption or '' }}"
+                                       placeholder="Text afișat sub imagine (opțional)">
+                            </div>
+                            <button type="button"
+                                    class="btn btn-sm btn-primary"
+                                    onclick="updateImage({{ featured_image.id }})">
+                                <i class="bi bi-save"></i> Salvează
+                            </button>
+                            {% if can_delete(user, 'post_image') %}
+                            <button type="button"
+                                    class="btn btn-sm btn-danger"
+                                    onclick="confirmDelete({{ featured_image.id }})">
+                                <i class="bi bi-trash"></i> Șterge
+                            </button>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-image display-4 text-muted"></i>
+                    <p class="text-muted mt-2">Nu există imagine principală</p>
+
+                    {% if can_create(user, 'post') %}
+                    <form method="POST"
+                          action="{{ url_for('upload_image', post_id=post.id) }}"
+                          enctype="multipart/form-data"
+                          class="mt-3">
+                        {{ csrf_input | safe }}
+                        <input type="hidden" name="is_featured" value="true">
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <input type="file"
+                                       class="form-control mb-2"
+                                       name="image"
+                                       accept=".jpg,.jpeg,.png"
+                                       required>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-upload"></i> Încarcă Imagine Principală
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Images Section -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-images"></i> Imagini pentru Conținut
+                    <span class="badge bg-secondary">{{ images_count }}/5</span>
+                </h5>
+                {% if can_upload and can_create(user, 'post') %}
+                <button type="button"
+                        class="btn btn-sm btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#uploadModal">
+                    <i class="bi bi-plus-circle"></i> Adaugă Imagine
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if content_images %}
+                <div class="row g-3" id="imageGrid">
+                    {% for image in content_images %}
+                    <div class="col-md-6 col-lg-4" data-image-id="{{ image.id }}">
+                        <div class="card h-100">
+                            <img src="/{{ image.image_path }}"
+                                 class="card-img-top"
+                                 alt="{{ image.alt_text }}"
+                                 style="height: 200px; object-fit: cover;">
+
+                            <div class="card-body">
+                                <h6 class="card-title text-truncate">{{ image.file_name }}</h6>
+                                <p class="card-text small text-muted">
+                                    {{ (image.file_size / 1024)|round(1) }} KB |
+                                    Ordine: {{ image.sort_order }}
+                                </p>
+
+                                <form class="image-form-{{ image.id }}">
+                                    {{ csrf_input | safe }}
+                                    <div class="mb-2">
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               name="alt_text"
+                                               value="{{ image.alt_text or '' }}"
+                                               placeholder="Text alternativ">
+                                    </div>
+                                    <div class="mb-2">
+                                        <input type="text"
+                                               class="form-control form-control-sm"
+                                               name="caption"
+                                               value="{{ image.caption or '' }}"
+                                               placeholder="Legendă">
+                                    </div>
+                                </form>
+
+                                <div class="btn-group btn-group-sm w-100" role="group">
+                                    <button type="button"
+                                            class="btn btn-outline-primary"
+                                            onclick="updateImage({{ image.id }})"
+                                            title="Salvează modificări">
+                                        <i class="bi bi-save"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-warning"
+                                            onclick="setAsFeatured({{ image.id }})"
+                                            title="Setează ca principală">
+                                        <i class="bi bi-star"></i>
+                                    </button>
+                                    {% if can_delete(user, 'post_image') %}
+                                    <button type="button"
+                                            class="btn btn-outline-danger"
+                                            onclick="confirmDelete({{ image.id }})"
+                                            title="Șterge">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Drag handle -->
+                            <div class="card-footer text-center drag-handle" style="cursor: move;">
+                                <i class="bi bi-grip-horizontal"></i>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle"></i>
+                    Trageți și plasați imaginile pentru a le reordona.
+                    Ordinea va fi salvată automat.
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-images display-4 text-muted"></i>
+                    <p class="text-muted mt-2">Nu există imagini pentru conținut</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST"
+                  action="{{ url_for('upload_image', post_id=post.id) }}"
+                  enctype="multipart/form-data">
+                {{ csrf_input | safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">Încarcă Imagine pentru Conținut</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Selectează imagine</label>
+                        <input type="file"
+                               class="form-control"
+                               name="image"
+                               accept=".jpg,.jpeg,.png"
+                               required>
+                        <div class="form-text">JPG, PNG. Maxim 2MB.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Text alternativ</label>
+                        <input type="text"
+                               class="form-control"
+                               name="alt_text"
+                               placeholder="Descriere pentru SEO">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Legendă (opțional)</label>
+                        <input type="text"
+                               class="form-control"
+                               name="caption"
+                               placeholder="Text afișat sub imagine">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Încarcă
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmare ștergere</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sigur doriți să ștergeți această imagine?</p>
+                <p class="text-danger"><strong>Atenție:</strong> Această acțiune este ireversibilă!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {{ csrf_input | safe }}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Șterge
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+// Initialize sortable for drag & drop
+const imageGrid = document.getElementById('imageGrid');
+if (imageGrid) {
+    new Sortable(imageGrid, {
+        animation: 150,
+        handle: '.drag-handle',
+        onEnd: async function(evt) {
+            const imageIds = Array.from(imageGrid.querySelectorAll('[data-image-id]'))
+                .map(el => parseInt(el.dataset.imageId));
+
+            try {
+                const response = await fetch(`/dashboard/staff/post_image/{{ post.id }}/reorder`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': getCSRFToken(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_ids: imageIds })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Reorder failed');
+                }
+            } catch (error) {
+                alert('Eroare la reordonare: ' + error.message);
+                window.location.reload();
+            }
+        }
+    });
+}
+
+// Update image details
+async function updateImage(imageId) {
+    const form = document.querySelector(`.image-form-${imageId}`) || document.getElementById('featuredForm');
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch(`/dashboard/staff/post_image/{{ post.id }}/image/${imageId}/update`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            // Show success feedback
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-check"></i> Salvat';
+            btn.classList.add('btn-success');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+            }, 2000);
+        } else {
+            throw new Error('Update failed');
+        }
+    } catch (error) {
+        alert('Eroare la actualizare: ' + error.message);
+    }
+}
+
+// Set as featured
+async function setAsFeatured(imageId) {
+    if (!confirm('Setați această imagine ca imagine principală?')) return;
+
+    try {
+        const response = await fetch(`/dashboard/staff/post_image/{{ post.id }}/image/${imageId}/set-featured`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': getCSRFToken()
+            }
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            throw new Error('Failed to set as featured');
+        }
+    } catch (error) {
+        alert('Eroare: ' + error.message);
+    }
+}
+
+// Delete confirmation
+function confirmDelete(imageId) {
+    const form = document.getElementById('deleteForm');
+    form.action = `/dashboard/staff/post_image/{{ post.id }}/image/${imageId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}
+
+
+

@@ -1,0 +1,249 @@
+<!-- server/dashboard/templates/product_price/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/product_price" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    <a href="{{ dashboard_prefix }}/product/{{ product.id }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-box"></i> Vezi Produs
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if request.query_params.get('success') == 'updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Prețurile au fost actualizate cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {% if request.query_params.get('error') == 'company_inactive' %}
+        Nu se pot actualiza prețurile! Compania furnizorului este dezactivată.
+    {% elif request.query_params.get('error') == 'prices_inactive' %}
+        Nu se pot actualiza prețurile! Unele prețuri sunt inactive.
+    {% else %}
+        Eroare la actualizare prețuri!
+    {% endif %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Alerte pentru status -->
+{% if not company_active %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-building-x me-2"></i>
+    <strong>Companie Inactivă:</strong> Compania furnizorului este dezactivată. Prețurile nu pot fi modificate.
+</div>
+{% elif has_inactive_prices %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Prețuri Inactive:</strong> Unele prețuri sunt dezactivate automat. Pentru a putea edita, contactează administratorul.
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Product Info -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-box text-primary me-2"></i>
+                    Informații Produs
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5">SKU:</dt>
+                    <dd class="col-7"><code>{{ product.sku }}</code></dd>
+
+                    <dt class="col-5">Nume:</dt>
+                    <dd class="col-7">{{ product.name }}</dd>
+
+                    <dt class="col-5">Categorie:</dt>
+                    <dd class="col-7">
+                        <a href="{{ dashboard_prefix }}/category/{{ product.category.id }}">
+                            {{ product.category.name }}
+                        </a>
+                    </dd>
+
+                    <dt class="col-5">Furnizor:</dt>
+                    <dd class="col-7">
+                        {{ product.vendor_company.name }}
+                        {% if not product.vendor_company.is_active %}
+                            <span class="badge bg-danger ms-1">Inactiv</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-5">Status:</dt>
+                    <dd class="col-7">
+                        {% if product.is_active %}
+                        <span class="badge bg-success">Activ</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactiv</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-5">Prețuri:</dt>
+                    <dd class="col-7">
+                        {% if has_inactive_prices %}
+                            <span class="badge bg-warning text-dark">Unele Inactive</span>
+                        {% else %}
+                            <span class="badge bg-success">Toate Active</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prices Form -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-currency-dollar text-success me-2"></i>
+                    {% if can_edit %}Actualizare Prețuri{% else %}Vizualizare Prețuri{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ dashboard_prefix }}/product_price/product/{{ product.id }}/update">
+                    {{ csrf_input|safe }}
+                    <div class="row g-3">
+                        {% for price_type in price_types %}
+                        {% set price = prices_dict.get(price_type) %}
+                        <div class="col-md-6">
+                            <div class="card h-100 {% if price and not price.is_active %}border-warning{% endif %}">
+                                <div class="card-header bg-{{ price_type.value }} bg-opacity-10">
+                                    <h6 class="mb-0 text-{{ price_type.value }}">
+                                        <i class="bi bi-tag"></i> Preț {{ price_type.value|upper }}
+                                        {% if price and not price.is_active %}
+                                            <span class="badge bg-warning text-dark ms-2">Inactiv</span>
+                                        {% endif %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group">
+                                        <input type="number"
+                                               name="price_{{ price_type.value }}"
+                                               class="form-control form-control-lg"
+                                               value="{{ price.amount|int if price else 0 }}"
+                                               min="0"
+                                               step="1"
+                                               {% if not can_edit or (price and not price.is_active) %}disabled{% endif %}
+                                               required>
+                                        <span class="input-group-text">MDL</span>
+                                    </div>
+                                    <small class="form-text {% if price and not price.is_active %}text-warning{% else %}text-muted{% endif %}">
+                                        {% if price %}
+                                        Actualizat: {{ price.updated_at|datetime_local }}
+                                        {% if not price.is_active %}
+                                            <br><strong>Status: Inactiv</strong>
+                                        {% endif %}
+                                        {% else %}
+                                        Preț nesetat
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ dashboard_prefix }}/product_price" class="btn btn-light">
+                            <i class="bi bi-x-circle"></i> Înapoi
+                        </a>
+                        {% if can_edit %}
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Salvează Prețuri
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-secondary" disabled>
+                                <i class="bi bi-lock"></i>
+                                {% if not company_active %}Companie Inactivă{% else %}Prețuri Inactive{% endif %}
+                            </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Informații despre status -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle text-info me-2"></i>
+                    Informații Status Prețuri
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not company_active %}
+                    <div class="alert alert-danger mb-3">
+                        <i class="bi bi-building-x me-2"></i>
+                        <strong>Companie Dezactivată:</strong> Compania furnizorului este dezactivată.
+                        Toate prețurile sunt automat inactive și nu pot fi modificate.
+                    </div>
+                {% endif %}
+
+                <p class="text-muted mb-2">
+                    <i class="bi bi-lightbulb"></i>
+                    <strong>Reguli pentru prețuri:</strong>
+                </p>
+                <ul class="text-muted mb-0">
+                    <li>Prețurile se dezactivează automat când compania furnizorului este dezactivată</li>
+                    <li>Prețurile inactive nu pot fi modificate până când compania nu este reactivată</li>
+                    <li>Pentru reactivarea prețurilor, contactează administratorul sistemului</li>
+                    <li>Prețurile inactive nu sunt vizibile în front-end pentru clienți</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bg-anonim { background-color: #6c757d !important; }
+.bg-user { background-color: #28a745 !important; }
+.bg-instalator { background-color: #ffc107 !important; }
+.bg-pro { background-color: #17a2b8 !important; }
+
+.text-anonim { color: #fff !important; }
+.text-user { color: #fff !important; }
+.text-instalator { color: #8700fd !important; }
+.text-pro { color: #fff !important; }
+
+.form-control-lg {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.form-control:disabled {
+    background-color: #f8f9fa;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+</style>
+{% endblock %}
+
+

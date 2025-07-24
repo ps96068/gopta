@@ -1,49 +1,59 @@
-from __future__ import annotations
+# schemas/user/user.py
 
-import enum
+
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, constr
+from typing import Optional
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+
+from models import UserStatus
 
 
-class ClientStatus(str, enum.Enum):
-    anonim = "anonim"
-    user = "user"
-    instalator = "instalator"
-    pro = "pro"
-
-
-Phone = constr(regex=r"^\+?[0-9]{7,15}$")  # type: ignore[valid-type]
-
-
-# ---------- Base ----------
+# Client Schemas
 class ClientBase(BaseModel):
-    telegram_id: str
-    username: str | None = None
-    phone_number: Phone | None = None
-    email: EmailStr | None = None
-    status: ClientStatus = ClientStatus.anonim
-    is_active: bool = True
+    """Schema de bază pentru Client."""
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    phone: Optional[str] = Field(None, max_length=20, pattern=r'^\+?[0-9\s\-\(\)]+$')
+    email: Optional[EmailStr] = None
+    language_code: str = Field(default="ro", max_length=10)
 
 
-# ---------- Create ----------
-class ClientCreate(ClientBase):
-    """Creat de bot – status rămâne implicit 'anonim'."""
+class ClientCreate(BaseModel):
+    """Schema pentru crearea inițială din Telegram."""
+    telegram_id: int
+    username: Optional[str] = Field(None, max_length=100)
+    first_name: Optional[str] = Field(None, max_length=100)
+    language_code: str = Field(default="ro", max_length=10)
 
 
-# ---------- Update ----------
-class ClientUpdate(BaseModel):
-    username: str | None = None
-    phone_number: Phone | None = None
-    email: EmailStr | None = None
-    status: ClientStatus | None = None
-    is_active: bool | None = None
+class ClientUpdate(ClientBase):
+    """Schema pentru actualizare date client (ANONIM -> USER)."""
+    first_name: str = Field(..., min_length=2, max_length=100)
+    last_name: str = Field(..., min_length=2, max_length=100)
+    phone: str = Field(..., max_length=20, pattern=r'^\+373[0-9]{8}$')
+    email: EmailStr
+
+    @field_validator('phone')
+    def validate_moldovan_phone(cls, v):
+        """Validează număr de telefon moldovenesc."""
+        if not v.startswith('+373'):
+            raise ValueError('Numărul de telefon trebuie să înceapă cu +373')
+        return v
 
 
-# ---------- Read ----------
-class ClientRead(ClientBase):
+class ClientStatusUpdate(BaseModel):
+    """Schema pentru actualizare status de către staff."""
+    status: UserStatus
+
+
+class ClientResponse(ClientBase):
+    """Schema pentru răspuns client."""
     id: int
+    telegram_id: int
+    status: UserStatus
+    username: Optional[str]
     created_at: datetime
-    last_visit: datetime | None = None
+    updated_at: datetime
+    is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,0 +1,249 @@
+<!-- server/dashboard/templates/auth/login.html -->
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    {{ csrf_meta|safe }}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dashboard_title }}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-header {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .login-body {
+            padding: 2rem;
+        }
+
+        .logo {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+
+        .btn-login {
+            background: #667eea;
+            border: none;
+            padding: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #764ba2;
+            transform: translateY(-1px);
+        }
+
+        .alert {
+            margin-bottom: 1rem;
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+    <script src="/static/webapp/js/csrf.js"></script>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <i class="bi bi-shield-lock logo"></i>
+            <h4 class="mb-0">PCE Dashboard</h4>
+            <p class="text-muted mb-0">Autentificare unificată</p>
+        </div>
+
+        <div class="login-body">
+            <!-- Messages -->
+            {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {% if error == "invalid_credentials" %}
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Email sau parolă incorectă!
+                    {% elif error == "server_error" %}
+                        <i class="bi bi-x-circle-fill me-2"></i>
+                        Eroare server. Încercați din nou.
+                    {% else %}
+                        {{ error }}
+                    {% endif %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            {% if request.query_params.get('logout') == 'success' %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    V-ați delogat cu succes!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+
+            <!-- Login Form -->
+            <form method="POST" action="{{ url_for('dashboard_root') }}auth/login">
+                {{ csrf_input|safe }}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="form-floating mb-3">
+                    <input type="email"
+                           class="form-control"
+                           id="email"
+                           name="email"
+                           placeholder="name@example.com"
+                           required
+                           autofocus>
+                    <label for="email">
+                        <i class="bi bi-envelope me-2"></i>Email
+                    </label>
+                </div>
+
+<!--                <div class="form-floating mb-3">-->
+<!--                    <input type="password"-->
+<!--                           class="form-control"-->
+<!--                           id="password"-->
+<!--                           name="password"-->
+<!--                           placeholder="Password"-->
+<!--                           required>-->
+<!--                    <label for="password">-->
+<!--                        <i class="bi bi-key me-2"></i>Parolă-->
+<!--                    </label>-->
+<!--                </div>-->
+
+                <div class="form-floating mb-3 position-relative">
+                    <input type="password"
+                           class="form-control pe-5"
+                           id="password"
+                           name="password"
+                           placeholder="Password"
+                           required>
+                    <label for="password">
+                        <i class="bi bi-key me-2"></i>Parolă
+                    </label>
+                    <button type="button"
+                            id="togglePassword"
+                            tabindex="-1"
+                            class="btn position-absolute end-0 top-50 translate-middle-y me-2"
+                            style="z-index: 10; background: transparent;">
+                        <i class="bi bi-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+
+
+
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="remember_me"
+                           name="remember_me"
+                           value="true">
+                    <label class="form-check-label" for="remember_me">
+                        Ține-mă minte (7 zile)
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login w-100">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>
+                    Autentificare
+                </button>
+            </form>
+
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Sistemul detectează automat tipul de cont
+                </small>
+            </div>
+        </div>
+
+        <div class="login-footer">
+            <small class="text-muted">
+                &copy; {{ current_year }} PCE. Toate drepturile rezervate.
+            </small>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Auto-focus pe email daca nu are valoare
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('email');
+            if (emailInput && !emailInput.value) {
+                emailInput.focus();
+            }
+        });
+
+        // Enter key submission
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('form').submit();
+            }
+        });
+
+
+        // Auto-focus pe email daca nu are valoare
+    document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email');
+        if (emailInput && !emailInput.value) {
+            emailInput.focus();
+        }
+
+        // Enter key submission
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('form').submit();
+            }
+        });
+
+        // Toggle password visibility
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+        togglePasswordBtn.addEventListener('click', function () {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            // Schimbă iconița
+            eyeIcon.classList.toggle('bi-eye');
+            eyeIcon.classList.toggle('bi-eye-slash');
+        });
+    });
+
+
+
+
+    </script>
+</body>
+</html>

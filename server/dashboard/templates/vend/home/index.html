@@ -1,0 +1,225 @@
+<!-- server/dashboard/templates/vend/home/index.html -->
+
+{% extends "base_vendor.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2>Bine ați venit, {{ user.first_name }}!</h2>
+        <p class="text-muted">Dashboard-ul companiei {{ company.name }}</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <!-- Total Products -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Produse</h6>
+                        <h3 class="mb-0">{{ stats.total_products }}</h3>
+                        <small class="text-success">
+                            <i class="bi bi-check-circle"></i> {{ stats.active_products }} active
+                        </small>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-box-seam fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders This Month -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Comenzi Luna Aceasta</h6>
+                        <h3 class="mb-0">{{ stats.total_orders }}</h3>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> Ultimele 30 zile
+                        </small>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-cart-check fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Revenue -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Venituri Lunare</h6>
+                        <h3 class="mb-0">{{ "{:,.0f}".format(stats.monthly_revenue) }} MDL</h3>
+                        <small class="text-warning">
+                            Comision: {{ "{:,.0f}".format(stats.commission_due) }} MDL
+                        </small>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-currency-dollar fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Requests -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Cereri în Așteptare</h6>
+                        <h3 class="mb-0">{{ stats.pending_requests }}</h3>
+                        {% if stats.pending_requests > 0 %}
+                            <small class="text-danger">
+                                <i class="bi bi-exclamation-circle"></i> Necesită răspuns
+                            </small>
+                        {% else %}
+                            <small class="text-success">
+                                <i class="bi bi-check-circle"></i> Toate procesate
+                            </small>
+                        {% endif %}
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-envelope fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title d-flex justify-content-between align-items-center">
+                    Coșuri Active
+                    <span class="badge bg-info">{{ stats.active_carts }}</span>
+                </h6>
+                <p class="text-muted mb-0">
+                    Clienți cu produsele dvs. în coș (ultimele 24h)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title d-flex justify-content-between align-items-center">
+                    Rata Comision
+                    <span class="badge bg-secondary">{{ stats.commission_rate }}%</span>
+                </h6>
+                <p class="text-muted mb-0">
+                    Comision platformă din vânzări
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Comenzi Recente</h5>
+            <a href="{{ dashboard_prefix }}/order" class="btn btn-sm btn-outline-primary">
+                Vezi toate <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_orders %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Număr Comandă</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                            <tr>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/order/{{ order.id }}" class="text-decoration-none">
+                                        #{{ order.order_number }}
+                                    </a>
+                                </td>
+                                <td>{{ order.client.first_name or 'Client' }} {{ order.client.last_name or '' }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'warning' if order.status.value == 'new' else 'info' if order.status.value == 'processing' else 'success' }}">
+                                        {{ order.status.value }}
+                                    </span>
+                                </td>
+                                <td>{{ "{:,.0f}".format(order.total_amount) }} MDL</td>
+                                <td>{{ order.created_at|datetime_local }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+                <p class="text-muted mt-2">Nu există comenzi recente</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <h5 class="mb-3">Acțiuni Rapide</h5>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ dashboard_prefix }}/product/create" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Produs Nou
+            </a>
+            <a href="{{ dashboard_prefix }}/product" class="btn btn-outline-primary">
+                <i class="bi bi-box-seam me-2"></i>Gestionare Produse
+            </a>
+            <a href="{{ dashboard_prefix }}/user_request" class="btn btn-outline-warning">
+                <i class="bi bi-envelope me-2"></i>Vezi Cereri
+            </a>
+            <a href="{{ dashboard_prefix }}/analytics" class="btn btn-outline-info">
+                <i class="bi bi-graph-up me-2"></i>Rapoarte
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh stats every 60 seconds
+    setInterval(async () => {
+        try {
+            const response = await fetch('{{ dashboard_prefix }}/home/api/stats');
+            const data = await response.json();
+
+            // Update notification badges if needed
+            if (data.new_orders > 0) {
+                document.querySelector('[data-type="orders"] .notification-count').textContent = data.new_orders;
+            }
+        } catch (error) {
+            console.error('Error refreshing stats:', error);
+        }
+    }, 60000);
+</script>
+{% endblock %}

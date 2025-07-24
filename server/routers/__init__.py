@@ -1,3 +1,6 @@
+# server/routers/__init__.py
+
+
 import importlib
 import os
 from fastapi import FastAPI
@@ -23,3 +26,4 @@ def include_versioned_routers(app: FastAPI):
                 if hasattr(module, "router"):
                     # Înregistrăm routerul cu prefixul corespunzător versiunii (ex: /api/v1)
                     app.include_router(module.router, prefix=f"/api/{version}", tags=[version])
+

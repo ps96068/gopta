@@ -1,0 +1,819 @@
+<!-- server/dashboard/templates/staff/import/products.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="page-title">Import Produse</h3>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ dashboard_prefix }}/home">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Import Produse</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Steps -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="activity">
+                                <div class="activity-box">
+                                    <ul class="activity-list">
+                                        <li class="step-item active" id="step-1">
+                                            <div class="activity-user">
+                                                <span class="avatar">1</span>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="timeline-content">
+                                                    <h5>Selectați tipul de import</h5>
+                                                    <p>Import general sau per categorie</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="step-item" id="step-2">
+                                            <div class="activity-user">
+                                                <span class="avatar">2</span>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="timeline-content">
+                                                    <h5>Încărcați fișierul Excel</h5>
+                                                    <p>Format .xlsx sau .xls</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="step-item" id="step-3">
+                                            <div class="activity-user">
+                                                <span class="avatar">3</span>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="timeline-content">
+                                                    <h5>Previzualizare și validare</h5>
+                                                    <p>Verificați datele înainte de import</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li class="step-item" id="step-4">
+                                            <div class="activity-user">
+                                                <span class="avatar">4</span>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="timeline-content">
+                                                    <h5>Rezultat import</h5>
+                                                    <p>Vezi produsele importate</p>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: Select Import Type -->
+    <div class="row" id="step-1-content">
+        <div class="col-md-6">
+            <div class="card import-type-card" data-type="general">
+                <div class="card-body text-center">
+                    <i class="fas fa-th-large fa-3x mb-3 text-primary"></i>
+                    <h4>Import General</h4>
+                    <p class="text-muted">Importați produse din multiple categorii. Fiecare produs trebuie să aibă specificat ID-ul categoriei.</p>
+                    <button class="btn btn-primary select-import-type" data-type="general">
+                        Selectează <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card import-type-card" data-type="category">
+                <div class="card-body text-center">
+                    <i class="fas fa-tag fa-3x mb-3 text-success"></i>
+                    <h4>Import per Categorie</h4>
+                    <p class="text-muted">Importați produse într-o singură categorie selectată. Toate produsele vor fi atribuite aceleiași categorii.</p>
+                    <button class="btn btn-success select-import-type" data-type="category">
+                        Selectează <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Upload File -->
+    <div class="row d-none" id="step-2-content">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Încărcați fișierul Excel</h4>
+                    <div class="card-tools">
+                        <button class="btn btn-sm btn-secondary" id="download-template">
+                            <i class="fas fa-download"></i> Descarcă Template
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Category selection for category import -->
+                    <div class="form-group d-none" id="category-select-group">
+                        <label>Selectați categoria <span class="text-danger">*</span></label>
+                        <select class="form-control select2" id="category-select" required>
+                            <option value="">Alegeți o categorie...</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- File upload area -->
+                    <div class="upload-area" id="upload-area">
+                        <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                        <h4>Trageți fișierul aici</h4>
+                        <p>sau</p>
+                        <input type="file" id="file-input" accept=".xlsx,.xls" class="d-none">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                            Selectează Fișier
+                        </button>
+                        <p class="text-muted mt-2">Formate acceptate: .xlsx, .xls</p>
+                    </div>
+
+                    <!-- File info -->
+                    <div class="file-info d-none" id="file-info">
+                        <div class="alert alert-info">
+                            <i class="fas fa-file-excel"></i>
+                            <span id="file-name"></span>
+                            <button class="btn btn-sm btn-danger float-right" id="remove-file">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info mt-4">
+                        <h5>Format Excel:</h5>
+                        <ul class="mb-0">
+                            <li><strong>SKU</strong> - Cod unic produs (obligatoriu)</li>
+                            <li><strong>Nume</strong> - Denumire produs (obligatoriu)</li>
+                            <li><strong>Descriere</strong> - Descriere detaliată</li>
+                            <li><strong>Descriere Scurtă</strong> - Max 500 caractere</li>
+                            <li id="category-id-instruction"><strong>ID Categorie</strong> - ID numeric al categoriei (obligatoriu)</li>
+                            <li><strong>Preț Anonim</strong> - Preț pentru vizitatori (obligatoriu)</li>
+                            <li><strong>Preț User</strong> - Preț pentru utilizatori înregistrați (obligatoriu)</li>
+                            <li><strong>Preț Instalator</strong> - Preț pentru instalatori (obligatoriu)</li>
+                            <li><strong>Preț Pro</strong> - Preț pentru profesioniști (obligatoriu)</li>
+                            <li><strong>În Stoc</strong> - DA/NU</li>
+                            <li><strong>Cantitate</strong> - Stoc disponibil</li>
+                        </ul>
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <button class="btn btn-secondary" id="back-to-step-1">
+                                <i class="fas fa-arrow-left"></i> Înapoi
+                            </button>
+                        </div>
+                        <div class="col-6 text-right">
+                            <button class="btn btn-primary d-none" id="preview-import">
+                                Previzualizare <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Preview -->
+    <div class="row d-none" id="step-3-content">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Previzualizare Import</h4>
+                    <div class="card-tools">
+                        <span class="badge badge-info" id="total-products">0 produse</span>
+                        <span class="badge badge-success" id="valid-products">0 valide</span>
+                        <span class="badge badge-danger" id="error-products">0 erori</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Rând</th>
+                                    <th>SKU</th>
+                                    <th>Nume</th>
+                                    <th>Categorie</th>
+                                    <th>Prețuri</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview-tbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Error summary -->
+                    <div class="alert alert-danger d-none" id="error-summary">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Erori detectate</h5>
+                        <p>Doar produsele valide vor fi importate. Corectați erorile în fișierul Excel și reîncărcați.</p>
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <button class="btn btn-secondary" id="back-to-step-2">
+                                <i class="fas fa-arrow-left"></i> Înapoi
+                            </button>
+                        </div>
+                        <div class="col-6 text-right">
+                            <button class="btn btn-success" id="process-import" disabled>
+                                <i class="fas fa-upload"></i> Importă <span id="import-count">0</span> produse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Results -->
+    <div class="row d-none" id="step-4-content">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Rezultat Import</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Statistics -->
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-success">
+                                <div class="card-body text-white text-center">
+                                    <h2 id="success-count">0</h2>
+                                    <p>Importate cu succes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-danger">
+                                <div class="card-body text-white text-center">
+                                    <h2 id="failed-count">0</h2>
+                                    <p>Eșuate</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info">
+                                <div class="card-body text-white text-center">
+                                    <h2 id="total-count">0</h2>
+                                    <p>Total procesate</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Detalii Import</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Rând</th>
+                                            <th>SKU</th>
+                                            <th>Status</th>
+                                            <th>Detalii</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="results-tbody">
+                                        <!-- Populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <a href="{{ dashboard_prefix }}/import" class="btn btn-primary">
+                                <i class="fas fa-redo"></i> Import Nou
+                            </a>
+                        </div>
+                        <div class="col-6 text-right">
+                            <a href="{{ dashboard_prefix }}/product" class="btn btn-success">
+                                <i class="fas fa-box"></i> Vezi Produse
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<!-- Import specific CSS -->
+<style>
+.import-type-card {
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.import-type-card:hover {
+    border-color: #007bff;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.25rem;
+    padding: 3rem;
+    text-align: center;
+    background: #f8f9fa;
+    transition: all 0.3s;
+}
+
+.upload-area.dragover {
+    border-color: #007bff;
+    background: #e7f1ff;
+}
+
+.step-item {
+    position: relative;
+}
+
+.step-item.active .avatar {
+    background: #007bff;
+    color: white;
+}
+
+.step-item.completed .avatar {
+    background: #28a745;
+    color: white;
+}
+
+.activity-list li:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 40px;
+    width: 2px;
+    height: calc(100% + 20px);
+    background: #dee2e6;
+}
+
+.table-preview-prices {
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.error-badge {
+    display: block;
+    margin-bottom: 2px;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Import specific JavaScript -->
+<script>
+// Wait for jQuery to be available
+function initImportPage() {
+    if (typeof jQuery === 'undefined') {
+        setTimeout(initImportPage, 100);
+        return;
+    }
+
+    console.log('jQuery loaded, initializing import page...');
+
+$(document).ready(function() {
+    console.log('Document ready, setting up import functionality...');
+
+    let currentStep = 1;
+    let importType = null;
+    let selectedFile = null;
+    let previewData = null;
+    let validProducts = [];
+
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                     document.querySelector('input[name="csrf_token"]')?.value;
+
+    console.log('CSRF Token:', csrfToken);
+
+    // Initialize select2 if available
+    if ($.fn.select2) {
+        $('#category-select').select2({
+            placeholder: 'Selectați categoria',
+            allowClear: true
+        });
+    }
+
+    // Step 1: Select import type
+    $('.select-import-type').on('click', function(e) {
+        e.preventDefault();
+        console.log('Import type button clicked');
+        importType = $(this).data('type');
+        console.log('Selected import type:', importType);
+        moveToStep(2);
+
+        if (importType === 'category') {
+            $('#category-select-group').removeClass('d-none');
+            $('#category-id-instruction').hide();
+        } else {
+            $('#category-select-group').addClass('d-none');
+            $('#category-id-instruction').show();
+        }
+    });
+
+    // Debug: Check if buttons exist
+    console.log('Import type buttons found:', $('.select-import-type').length);
+
+    // Alternative click handler for debugging
+    $(document).on('click', '.select-import-type', function(e) {
+        e.preventDefault();
+        console.log('Document level click detected on import type button');
+        importType = $(this).data('type');
+        console.log('Import type from document click:', importType);
+        moveToStep(2);
+
+        if (importType === 'category') {
+            $('#category-select-group').removeClass('d-none');
+            $('#category-id-instruction').hide();
+        } else {
+            $('#category-select-group').addClass('d-none');
+            $('#category-id-instruction').show();
+        }
+    });
+
+    // Step 2: File upload
+    $('#file-input').change(function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    });
+
+    // Drag and drop
+    $('#upload-area').on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('dragover');
+    });
+
+    $('#upload-area').on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+    });
+
+    $('#upload-area').on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+
+        const file = e.originalEvent.dataTransfer.files[0];
+        if (file) {
+            handleFileSelect(file);
+        }
+    });
+
+    function handleFileSelect(file) {
+        console.log('File selected:', file.name, 'Type:', file.type);
+
+        // Check file extension instead of MIME type
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+            showError('Vă rugăm selectați un fișier Excel (.xlsx sau .xls)');
+            return;
+        }
+
+        selectedFile = file;
+        $('#file-name').text(file.name);
+        $('#file-info').removeClass('d-none');
+        $('#upload-area').addClass('d-none');
+
+        // Enable preview button if category is selected (for category import)
+        if (importType === 'general' || (importType === 'category' && $('#category-select').val())) {
+            $('#preview-import').removeClass('d-none');
+        }
+    }
+
+    // Error/Success message helpers
+    function showError(message) {
+        console.error(message);
+        if (typeof toastr !== 'undefined') {
+            toastr.error(message);
+        } else {
+            alert('Eroare: ' + message);
+        }
+    }
+
+    function showSuccess(message) {
+        console.log(message);
+        if (typeof toastr !== 'undefined') {
+            toastr.success(message);
+        } else {
+            alert('Succes: ' + message);
+        }
+    }
+
+    $('#remove-file').on('click', function(e) {
+        e.preventDefault();
+        console.log('Remove file clicked');
+        selectedFile = null;
+        $('#file-input').val('');
+        $('#file-info').addClass('d-none');
+        $('#upload-area').removeClass('d-none');
+        $('#preview-import').addClass('d-none');
+    });
+
+    // Enable preview when category is selected
+    $('#category-select').on('change', function() {
+        console.log('Category changed:', $(this).val());
+        if ($(this).val() && selectedFile) {
+            $('#preview-import').removeClass('d-none');
+        } else {
+            $('#preview-import').addClass('d-none');
+        }
+    });
+
+    // Download template
+    $('#download-template').on('click', function(e) {
+        e.preventDefault();
+        console.log('Download template clicked, type:', importType);
+        if (importType) {
+            window.location.href = `{{ dashboard_prefix }}/import/template/${importType}`;
+        }
+    });
+
+    // Preview import
+    $('#preview-import').on('click', function(e) {
+        e.preventDefault();
+        console.log('Preview import clicked');
+
+        if (!selectedFile) {
+            showError('Selectați un fișier');
+            return;
+        }
+
+        if (importType === 'category' && !$('#category-select').val()) {
+            showError('Selectați o categorie');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('import_type', importType);
+        if (importType === 'category') {
+            formData.append('category_id', $('#category-select').val());
+        }
+
+        $.ajax({
+            url: '{{ dashboard_prefix }}/import/preview',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            },
+            beforeSend: function() {
+                showLoader('Se procesează fișierul...');
+            },
+            success: function(response) {
+                hideLoader();
+                if (response.success) {
+                    previewData = response.products;
+                    validProducts = response.products.filter(p => !p.errors || p.errors.length === 0);
+                    displayPreview(response);
+                    moveToStep(3);
+                } else {
+                    showError(response.error || 'Eroare la procesarea fișierului');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showError('Eroare la procesarea fișierului');
+            }
+        });
+    });
+
+    function displayPreview(response) {
+        const tbody = $('#preview-tbody');
+        tbody.empty();
+
+        $('#total-products').text(response.stats.total + ' produse');
+        $('#valid-products').text(response.stats.valid + ' valide');
+        $('#error-products').text(response.stats.errors + ' erori');
+
+        response.products.forEach(product => {
+            const hasErrors = product.errors && product.errors.length > 0;
+            const row = $('<tr>').addClass(hasErrors ? 'table-danger' : '');
+
+            row.append(`<td>${product.row}</td>`);
+            row.append(`<td><code>${product.sku || 'N/A'}</code></td>`);
+            row.append(`<td>${product.name || 'N/A'}</td>`);
+            row.append(`<td>${product.category_id || 'N/A'}</td>`);
+
+            // Prices
+            const prices = `
+                <div class="table-preview-prices">
+                    A: ${product.price_anonim || 0} MDL<br>
+                    U: ${product.price_user || 0} MDL<br>
+                    I: ${product.price_instalator || 0} MDL<br>
+                    P: ${product.price_pro || 0} MDL
+                </div>
+            `;
+            row.append(`<td>${prices}</td>`);
+
+            // Status
+            let status = '';
+            if (hasErrors) {
+                status = '<div>';
+                product.errors.forEach(error => {
+                    status += `<span class="badge badge-danger error-badge"><i class="fas fa-times"></i> ${error}</span>`;
+                });
+                status += '</div>';
+            } else {
+                status = '<span class="badge badge-success"><i class="fas fa-check"></i> Valid</span>';
+            }
+
+            if (product.warnings && product.warnings.length > 0) {
+                product.warnings.forEach(warning => {
+                    status += `<br><span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> ${warning}</span>`;
+                });
+            }
+
+            row.append(`<td>${status}</td>`);
+            tbody.append(row);
+        });
+
+        if (response.stats.errors > 0) {
+            $('#error-summary').removeClass('d-none');
+        } else {
+            $('#error-summary').addClass('d-none');
+        }
+
+        $('#import-count').text(validProducts.length);
+        $('#process-import').prop('disabled', validProducts.length === 0);
+    }
+
+    // Process import
+    $('#process-import').on('click', function(e) {
+        e.preventDefault();
+        console.log('Process import clicked');
+
+        if (validProducts.length === 0) {
+            showError('Nu există produse valide de importat');
+            return;
+        }
+
+        const importData = {
+            type: importType,
+            category_id: importType === 'category' ? $('#category-select').val() : null,
+            products: validProducts
+        };
+
+        $.ajax({
+            url: '{{ dashboard_prefix }}/import/process',
+            type: 'POST',
+            data: JSON.stringify(importData),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRF-Token': csrfToken
+            },
+            beforeSend: function() {
+                showLoader('Se importă produsele...');
+            },
+            success: function(response) {
+                hideLoader();
+                if (response.success) {
+                    displayResults(response.results);
+                    moveToStep(4);
+                } else {
+                    showError(response.error || 'Eroare la import');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showError('Eroare la import');
+            }
+        });
+    });
+
+    function displayResults(results) {
+        $('#success-count').text(results.success);
+        $('#failed-count').text(results.failed);
+        $('#total-count').text(results.success + results.failed);
+
+        const tbody = $('#results-tbody');
+        tbody.empty();
+
+        results.details.forEach(detail => {
+            const row = $('<tr>').addClass(detail.status === 'error' ? 'table-danger' : 'table-success');
+            row.append(`<td>${detail.row}</td>`);
+            row.append(`<td><code>${detail.sku}</code></td>`);
+            row.append(`<td>
+                ${detail.status === 'success'
+                    ? '<span class="badge badge-success">Succes</span>'
+                    : '<span class="badge badge-danger">Eroare</span>'}
+            </td>`);
+            row.append(`<td>${detail.message || (detail.status === 'success' ? 'Importat cu succes' : '')}</td>`);
+            tbody.append(row);
+        });
+    }
+
+    // Navigation
+    $('#back-to-step-1').on('click', function(e) {
+        e.preventDefault();
+        console.log('Back to step 1 clicked');
+        moveToStep(1);
+    });
+
+    $('#back-to-step-2').on('click', function(e) {
+        e.preventDefault();
+        console.log('Back to step 2 clicked');
+        moveToStep(2);
+    });
+
+    function moveToStep(step) {
+        console.log('Moving to step:', step);
+
+        // Hide all steps
+        $('[id^="step-"][id$="-content"]').addClass('d-none');
+
+        // Show current step
+        $(`#step-${step}-content`).removeClass('d-none');
+
+        // Update step indicators
+        $('.step-item').removeClass('active completed');
+        for (let i = 1; i < step; i++) {
+            $(`#step-${i}`).addClass('completed');
+        }
+        $(`#step-${step}`).addClass('active');
+
+        currentStep = step;
+        console.log('Moved to step:', currentStep);
+    }
+
+    // Helper functions
+    function showLoader(message) {
+        console.log('Loading:', message);
+        // You can add a proper loader here
+        if (typeof toastr !== 'undefined') {
+            toastr.info(message);
+        }
+    }
+
+    function hideLoader() {
+        console.log('Hiding loader');
+        // Hide loader implementation
+    }
+
+    console.log('Import page initialization complete');
+});
+}
+
+// Start initialization
+initImportPage();
+
+// Test jQuery after page load
+window.addEventListener('load', function() {
+    console.log('Page fully loaded');
+    console.log('jQuery version:', jQuery?.fn?.jquery);
+    console.log('Import buttons found:', document.querySelectorAll('.select-import-type').length);
+
+    // Fallback: Bind events using vanilla JS if jQuery fails
+    if (document.querySelectorAll('.select-import-type').length > 0 && !jQuery) {
+        console.log('Using vanilla JS fallback for events');
+        document.querySelectorAll('.select-import-type').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Vanilla JS click detected');
+                // You can implement the logic here if needed
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

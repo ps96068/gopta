@@ -1,0 +1,263 @@
+<!-- server/dashboard/templates/staff/order/create.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Comandă Nouă - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Comandă Nouă{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/order" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Step 1: Selectare Client -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-check text-primary me-2"></i>
+                    Pasul 1: Selectează Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="clientForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Client *</label>
+
+                        {% if client %}
+                        <!-- Pre-selected client -->
+                        <div class="alert alert-info">
+                            <strong>Client selectat:</strong>
+                            {{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}
+                            {% if client.email %}({{ client.email }}){% endif %}
+                            <input type="hidden" name="client_id" value="{{ client.id }}">
+                        </div>
+                        {% else %}
+                        <!-- Client selection -->
+                        <select name="client_id" class="form-select" id="clientSelect" required>
+                            <option value="">-- Selectează un client --</option>
+                            {% for c in clients %}
+                            <option value="{{ c.id }}"
+                                    data-status="{{ c.status.value }}"
+                                    data-email="{{ c.email or '' }}"
+                                    data-phone="{{ c.phone or '' }}">
+                                {{ c.first_name or 'Anonim' }} {{ c.last_name or '' }}
+                                {% if c.email %}({{ c.email }}){% endif %}
+                                - {{ c.status.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </div>
+
+                    <!-- Client info display -->
+                    <div id="clientInfo" class="d-none mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-2">Informații Client</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Status:</small><br>
+                                        <span class="badge" id="clientStatus"></span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Email:</small><br>
+                                        <span id="clientEmail">-</span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <small class="text-muted">Telefon:</small><br>
+                                        <span id="clientPhone">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Step 2: Selectare Mod Creare - vizibil doar după selectare client -->
+        <div class="card border-0 shadow-sm" id="modeSelection" {% if not client %}style="display: none;"{% endif %}>
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear text-info me-2"></i>
+                    Pasul 2: Alege Modul de Creare
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Opțiune 1: Din Coș -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-2 mode-card" data-mode="cart">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-cart-check text-primary" style="font-size: 3rem;"></i>
+                                </div>
+                                <h5 class="card-title">Comandă din Coș</h5>
+                                <p class="text-muted">
+                                    Creează un coș de cumpărături și adaugă produse gradual.
+                                    Ideal pentru comenzi complexe sau când clientul alege produsele.
+                                </p>
+                                <div class="mt-auto">
+                                    <form method="post" action="{{ dashboard_prefix }}/order/create-cart">
+                                        {{ csrf_input|safe }}
+                                        <input type="hidden" name="client_id" id="cartClientId" value="{{ client.id if client else '' }}">
+                                        <button type="submit" class="btn btn-primary w-100"
+                                                {% if not client %}disabled{% endif %}>
+                                            <i class="bi bi-cart-plus"></i> Creează Coș și Adaugă Produse
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Opțiune 2: Comandă Manuală -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-2 mode-card" data-mode="manual">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="bi bi-lightning-charge text-success" style="font-size: 3rem;"></i>
+                                </div>
+                                <h5 class="card-title">Comandă Directă</h5>
+                                <p class="text-muted">
+                                    Selectează rapid produsele și cantitățile într-o singură pagină.
+                                    Perfect pentru comenzi simple sau repetitive.
+                                </p>
+                                <div class="mt-auto">
+                                    <a href="{{ dashboard_prefix }}/order/create-manual?client_id={{ client.id if client else '' }}"
+                                       class="btn btn-success w-100"
+                                       id="manualOrderBtn"
+                                       {% if not client %}onclick="return false;" style="opacity: 0.5; cursor: not-allowed;"{% endif %}>
+                                        <i class="bi bi-pencil-square"></i> Creează Comandă Rapid
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Sugestie:</strong>
+                    <ul class="mb-0">
+                        <li>Folosiți <strong>Comandă din Coș</strong> pentru comenzi mari sau când clientul dorește să vadă coșul înainte de finalizare</li>
+                        <li>Folosiți <strong>Comandă Directă</strong> pentru comenzi rapide sau când știți exact ce produse sunt necesare</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.mode-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.mode-card:hover {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-5px);
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSelect = document.getElementById('clientSelect');
+    const modeSelection = document.getElementById('modeSelection');
+    const clientInfo = document.getElementById('clientInfo');
+    const cartClientId = document.getElementById('cartClientId');
+    const manualOrderBtn = document.getElementById('manualOrderBtn');
+
+    // Client selection handler
+    if (clientSelect) {
+        clientSelect.addEventListener('change', function() {
+            const selected = this.options[this.selectedIndex];
+
+            if (this.value) {
+                // Show client info
+                clientInfo.classList.remove('d-none');
+
+                // Update status badge
+                const status = selected.dataset.status;
+                const statusBadge = document.getElementById('clientStatus');
+                statusBadge.textContent = status;
+                statusBadge.className = 'badge bg-' + status.toLowerCase();
+
+                // Update contact info
+                document.getElementById('clientEmail').textContent = selected.dataset.email || '-';
+                document.getElementById('clientPhone').textContent = selected.dataset.phone || '-';
+
+                // Show mode selection
+                modeSelection.style.display = 'block';
+
+                // Update hidden input for cart form
+                cartClientId.value = this.value;
+
+                // Update manual order button
+                if (manualOrderBtn) {
+                    manualOrderBtn.href = `{{ dashboard_prefix }}/order/create-manual?client_id=${this.value}`;
+                    manualOrderBtn.style.opacity = '1';
+                    manualOrderBtn.style.cursor = 'pointer';
+                    manualOrderBtn.onclick = null;
+                }
+
+                // Enable cart button
+                const cartBtn = document.querySelector('button[type="submit"]');
+                if (cartBtn) {
+                    cartBtn.disabled = false;
+                }
+            } else {
+                // Hide everything if no client selected
+                clientInfo.classList.add('d-none');
+                modeSelection.style.display = 'none';
+
+                // Disable buttons
+                const cartBtn = document.querySelector('button[type="submit"]');
+                if (cartBtn) {
+                    cartBtn.disabled = true;
+                }
+
+                if (manualOrderBtn) {
+                    manualOrderBtn.style.opacity = '0.5';
+                    manualOrderBtn.style.cursor = 'not-allowed';
+                    manualOrderBtn.onclick = function() { return false; };
+                }
+            }
+        });
+    }
+
+    // Mode card hover effects
+    const modeCards = document.querySelectorAll('.mode-card');
+    modeCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            // If clicking on the card but not on button/link
+            if (!e.target.closest('button') && !e.target.closest('a')) {
+                const button = this.querySelector('button');
+                const link = this.querySelector('a');
+
+                if (button && !button.disabled) {
+                    button.click();
+                } else if (link && link.style.cursor !== 'not-allowed') {
+                    link.click();
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+<!-- server/dashboard/templates/staff/permissions.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/staff" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi la Staff
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-lock text-warning me-2"></i>
+                    Permisiuni Manager
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Alert -->
+                {% if request.query_params.get('success') == 'updated' %}
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Permisiunile au fost actualizate cu succes!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <!-- Info -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-warning text-white me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                            {{ staff.first_name[0] }}{{ staff.last_name[0] }}
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ staff.first_name }} {{ staff.last_name }}</h5>
+                            <span class="badge bg-warning">Manager</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Form -->
+                <form method="post">
+                    {{ csrf_input|safe }}
+                    <h6 class="text-muted mb-3">
+                        <i class="bi bi-check2-square"></i> Permisiuni CRUD
+                    </h6>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <small>Managerii pot întotdeauna VIZUALIZA toate datele.
+                        Permisiunile de mai jos controlează doar operațiile de CREARE, EDITARE și ȘTERGERE.</small>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="can_manage_clients"
+                               id="canManageClients" value="true"
+                               {% if staff.can_manage_clients %}checked{% endif %}>
+                        <label class="form-check-label" for="canManageClients">
+                            <strong>Poate gestiona Clienți</strong>
+                            <br>
+                            <small class="text-muted">Creare, editare și ștergere clienți</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="can_manage_products"
+                               id="canManageProducts" value="true"
+                               {% if staff.can_manage_products %}checked{% endif %}>
+                        <label class="form-check-label" for="canManageProducts">
+                            <strong>Poate gestiona Produse</strong>
+                            <br>
+                            <small class="text-muted">Creare, editare și ștergere produse</small>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input class="form-check-input" type="checkbox" name="can_manage_orders"
+                               id="canManageOrders" value="true"
+                               {% if staff.can_manage_orders %}checked{% endif %}>
+                        <label class="form-check-label" for="canManageOrders">
+                            <strong>Poate gestiona Comenzi</strong>
+                            <br>
+                            <small class="text-muted">Procesare și anulare comenzi</small>
+                        </label>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ dashboard_prefix }}/staff" class="btn btn-light">
+                            <i class="bi bi-x-circle"></i> Anulează
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Salvează Permisiuni
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">
+                    <i class="bi bi-info-circle"></i> Despre Permisiuni
+                </h6>
+                <ul class="mb-0">
+                    <li><strong>Super Admin</strong>: Acces complet la toate funcționalitățile</li>
+                    <li><strong>Manager</strong>: Acces bazat pe permisiunile setate aici</li>
+                    <li><strong>Supervisor</strong>: Doar vizualizare (read-only)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.form-check-input:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+</style>
+{% endblock %}

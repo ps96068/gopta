@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    {{ csrf_meta|safe }}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ dashboard_title }}{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+
+
+    <!-- jQuery (NECESAR) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Font Awesome (opțional, pentru iconuri) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<!-- Toastr (opțional, pentru notificări) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<!-- Select2 (opțional, dacă folosești) -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+
+
+    <!-- Custom Dashboard CSS -->
+    <link href="{{ url_for('dashboard_static', path='css/dashboard.css') }}" rel="stylesheet">
+
+    <script src="/static/webapp/js/csrf.js"></script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-user-type="{{ user_type }}" data-user-id="{{ user.id }}"
+      {% if is_vendor %}data-vendor-company-id="{{ user.company_id }}"{% endif %}>
+
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <!-- Sidebar Toggle -->
+            <button class="navbar-toggler border-0" type="button" id="sidebarToggle">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Brand -->
+            <a class="navbar-brand ms-2" href="{{ dashboard_prefix }}/{% if is_vendor %}vendor/home{% else %}home{% endif %}">
+                <i class="bi bi-speedometer2"></i>
+                {% if is_vendor %}
+                    {{ company.name }}
+                {% else %}
+                    PCE Dashboard
+                {% endif %}
+            </a>
+
+            <!-- Right Side -->
+            <div class="navbar-nav ms-auto">
+                <!-- Notifications -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                              id="notificationBadge" style="display: none;">
+                            0
+                        </span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <h6 class="dropdown-header">Notificări</h6>
+                        <div id="notificationList">
+                            <a class="dropdown-item text-muted" href="#">Nu sunt notificări noi</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Menu -->
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i>
+                        <span class="d-none d-md-inline">{{ user.first_name }} {{ user.last_name }}</span>
+                        <span class="badge bg-{% if is_vendor %}info{% else %}secondary{% endif %} ms-1">
+                            {% if is_vendor %}
+                                Vendor
+                            {% else %}
+                                {{ role }}
+                            {% endif %}
+                        </span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <h6 class="dropdown-header">{{ user.email }}</h6>
+                        {% if is_vendor %}
+                            <a class="dropdown-item text-muted" href="#">
+                                <i class="bi bi-building"></i> {{ company.name }}
+                            </a>
+                        {% endif %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ dashboard_prefix }}/{% if is_vendor %}vendor/{% endif %}profile">
+                            <i class="bi bi-person"></i> Profil
+                        </a>
+                        <a class="dropdown-item" href="{{ dashboard_prefix }}/{% if is_vendor %}vendor/{% endif %}settings">
+                            <i class="bi bi-gear"></i> Setări
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item text-danger" href="{{ url_for('dashboard_root') }}auth/logout">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Wrapper -->
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar {% if is_vendor %}vendor-sidebar{% endif %}">
+            <div class="sidebar-content">
+                <!-- Dashboard Menu -->
+                <ul class="sidebar-nav">
+                    {% for section in menu_structure %}
+                        <li class="sidebar-header">{{ section.header }}</li>
+
+                        {% for item in section['items'] %}
+                            {# Check permissions #}
+                            {% if not item.roles or role in item.roles %}
+                                {% if item.type == 'dropdown' and item.models %}
+                                    {# Dropdown with models #}
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#{{ item.name }}Menu">
+                                            <i class="bi {{ item.icon }}"></i>
+                                            <span>{{ item.display_name }}</span>
+                                            <i class="bi bi-chevron-down ms-auto"></i>
+                                        </a>
+                                        <ul id="{{ item.name }}Menu" class="sidebar-dropdown collapse" data-bs-parent="#sidebar">
+                                            {% for model_name in item.models %}
+                                                {% if model_name in models_config and can_read(user, model_name) %}
+                                                    {% set model = models_config[model_name] %}
+                                                    <li class="sidebar-item">
+                                                        <a class="sidebar-link" href="{{ dashboard_prefix }}/{{ model_name }}">
+                                                            {{ model.display_name }}
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </li>
+                                {% elif item.type == 'single' %}
+                                    {# Single item with URL #}
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ dashboard_prefix }}/{{ item.url }}">
+                                            <i class="bi {{ item.icon }}"></i>
+                                            <span>{{ item.display_name }}</span>
+                                            {% if item.badge %}
+                                            <span class="badge bg-{{ item.badge }} ms-1"
+                                                  id="{{ item.name }}Badge"
+                                                  style="display: none;">0</span>
+                                            {% endif %}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    {# Regular menu item #}
+                                    <li class="sidebar-item">
+                                        <a class="sidebar-link" href="{{ dashboard_prefix }}/{{ item.url }}">
+                                            <i class="bi {{ item.icon }}"></i>
+                                            <span>{{ item.display_name }}</span>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <div class="container-fluid p-3">
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <div>
+                        {% block page_actions %}{% endblock %}
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Page Content -->
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Alpine.js for reactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Custom Dashboard JS -->
+    <script src="{{ url_for('dashboard_static', path='/js/dashboard.js') }}"></script>
+
+    <!-- Global JS -->
+    <script>
+        // Get user type and adjust behavior
+        const userType = document.body.dataset.userType;
+        const isVendor = userType === 'vendor';
+        const baseUrl = isVendor ? '/dashboard/vendor/' : '/dashboard/';
+
+        // Sidebar toggle
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.querySelector('.content').classList.toggle('expanded');
+            localStorage.setItem('sidebarCollapsed', document.getElementById('sidebar').classList.contains('collapsed'));
+        });
+
+        // Restore sidebar state
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.getElementById('sidebar').classList.add('collapsed');
+            document.querySelector('.content').classList.add('expanded');
+        }
+
+        // Active menu item
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+                const parent = link.closest('.sidebar-dropdown');
+                if (parent) {
+                    parent.classList.add('show');
+                    parent.previousElementSibling.classList.remove('collapsed');
+                }
+            }
+        });
+
+        // Update notification endpoints based on user type
+        async function updateNotificationBadge() {
+            try {
+                const endpoint = isVendor ? '/dashboard/vendor/api/notifications' : '/dashboard/staff/home/api/notifications';
+                const response = await fetch(endpoint);
+                const data = await response.json();
+
+                const total = (data.new_orders || 0) + (data.new_requests || 0);
+                const badge = document.getElementById('notificationBadge');
+
+                if (badge) {
+                    if (total > 0) {
+                        badge.style.display = 'inline';
+                        badge.textContent = total;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating notification badge:', error);
+            }
+        }
+
+        // WebSocket configuration based on user type
+        let notificationSocket = null;
+        let wsToken = null;
+
+        async function getWSToken() {
+            try {
+                const endpoint = isVendor ? '/dashboard/vendor/api/ws-token' : '/dashboard/staff/home/api/ws-token';
+                const response = await fetch(endpoint, { credentials: 'same-origin' });
+                if (!response.ok) throw new Error('Failed to get token');
+                const data = await response.json();
+                return data.token;
+            } catch (error) {
+                console.error('Failed to get WS token:', error);
+                return null;
+            }
+        }
+
+        async function connectNotifications() {
+            wsToken = await getWSToken();
+            if (!wsToken) {
+                console.error('No auth token for WebSocket');
+                return;
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsEndpoint = isVendor ? 'vendor/ws/notifications' : 'staff/home/ws/notifications';
+            const wsUrl = `${protocol}//${window.location.host}/dashboard/${wsEndpoint}?token=${wsToken}`;
+
+            console.log("+++++++++")
+            console.log(wsUrl)
+            console.log("+++++++++")
+
+            console.log('Connecting to WebSocket...');
+            notificationSocket = new WebSocket(wsUrl);
+
+            notificationSocket.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            notificationSocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Notification received:', data);
+                    handleNotification(data);
+                } catch (e) {
+                    console.log('WebSocket text message:', event.data);
+                }
+            };
+
+            notificationSocket.onclose = (event) => {
+                console.log('WebSocket closed:', event.code, event.reason);
+                setTimeout(connectNotifications, 5000);
+            };
+        }
+
+        function handleNotification(notification) {
+            updateNotificationBadge();
+            // Handle specific notification types
+            if (notification.notification_type === 'new_order') {
+                const badge = document.getElementById('orderBadge');
+                if (badge) {
+                    badge.style.display = 'inline';
+                    badge.textContent = parseInt(badge.textContent || 0) + 1;
+                }
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await connectNotifications();
+            updateNotificationBadge();
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-arrow-right text-danger"></i> Confirmare Logout
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Sigur doriți să vă delogați din dashboard?</p>
+                    <p class="text-muted mb-0">
+                        <small>Sesiunea dvs. va fi închisă și va trebui să vă autentificați din nou.</small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <form method="POST" action="{{ url_for('dashboard_root') }}auth/logout" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

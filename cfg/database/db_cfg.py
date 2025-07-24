@@ -1,3 +1,9 @@
+# cfg/database/db_cfg.py
+
+"""
+PostgreSQL 16 - https://console.aiven.io/account  => basinfocontact@gmail.com
+"""
+
 from pydantic import field_validator, model_validator, ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -38,7 +44,7 @@ class DatabaseSettings(BaseSettings):
 
     @model_validator(mode='after')
     def validate_db_use(self) -> Self:
-        if self.use_sqlite_db and self.use_postgres_db:
+        if self.use_sqlite_db == self.use_postgres_db:
             raise ValueError("At least one db must be specified.")
         return self
 

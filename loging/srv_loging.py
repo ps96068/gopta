@@ -2,6 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 
+logger = logging.getLogger(__name__)
 
 def setup_srv_logging() -> logging.Logger:
     """
@@ -30,7 +31,7 @@ def setup_srv_logging() -> logging.Logger:
 
     logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler])
 
-    logger = logging.getLogger(__name__)
+    # logger = logging.getLogger(__name__)
     logger.info("Logging is set up to file and console.")
 
     return logger

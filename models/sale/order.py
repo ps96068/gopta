@@ -1,121 +1,64 @@
+# models/sale/order.py
+"""
+Order model pentru comenzile clienților.
+
+Comenzile pot fi plasate pentru uz personal (B2C) sau pentru companie (B2B).
+Fiecare comandă generează automat o factură și notificări.
+
+Business Rules:
+- Order number format: ORD-YYYY-XXXXX
+- Status flow: pending → processing → completed (sau cancelled)
+- La anulare se cere motiv obligatoriu
+- Notificări automate la creare și schimbare status
+- Prețurile sunt snapshot la momentul comenzii
+"""
+
 from __future__ import annotations
+from typing import Optional, List, TYPE_CHECKING
 
-import enum
 from datetime import datetime
-from decimal import Decimal
-from sqlalchemy import Text, Integer, ForeignKey, Numeric, Enum, String, Index
-from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
-from sqlalchemy.sql import func
+from typing import Optional, List
+from sqlalchemy import String, ForeignKey, Numeric, Text, Integer, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin
+from models import OrderStatus
 
 
-from cfg import Base
-from cfg.mixins import AuditMixin
-from models.base import IsActiveMixin, CreatedAtMixin, UpdatedAtMixin
+if TYPE_CHECKING:
+    from models import Client, Staff, OrderItem, Invoice
 
 
-# catalog/sale/order.py
-
-class OrderStatus(enum.Enum):
-    pending = "pending"
-    processing = "processing"
-    completed = "completed"
-    canceled = "canceled"
-
-
-class Order(Base, AuditMixin, CreatedAtMixin, UpdatedAtMixin):
+class Order(Base, CreatedAtMixin, UpdatedAtMixin):
+    """Model pentru comenzi."""
     __tablename__ = "orders"
-    __table_args__ = (
-        Index("ix_orders_client", "client_id"),
-        Index("ix_orders_status", "status"),
-    )
 
-    # ---------- PK & FK ----------
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False, index=True)
 
-    # ---------- Status ----------
-    status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus),
-        default=OrderStatus.pending,
-        nullable=False,
-    )
+    # Număr comandă unic
+    order_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
 
-    # ---------- Totals snapshot ----------
-    total_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
-    total_mdl: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
-    currency_rate_used: Mapped[Decimal] = mapped_column(Numeric(10, 4))
+    # Status și procesare
+    status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), default=OrderStatus.NEW, nullable=False)
+    processed_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("staff.id"))
+    processed_at: Mapped[Optional[datetime]] = mapped_column()
 
-    # ---------- Client contact snapshot ----------
-    client_username: Mapped[str] = mapped_column(String, nullable=False)
-    client_phone: Mapped[str] = mapped_column(String(15), nullable=False)
-    client_email: Mapped[str] = mapped_column(String, nullable=False)
+    # Total comandă
+    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="MDL", nullable=False)
 
-    # ---------- Optional ----------
-    invoice_qr_path: Mapped[str | None] = mapped_column(String, nullable=True)
-    cancel_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Note și comentarii
+    client_note: Mapped[Optional[str]] = mapped_column(Text)
+    staff_note: Mapped[Optional[str]] = mapped_column(Text)
 
-    # ---------- Relații ----------
-    client: Mapped["Client"] = relationship("Client", back_populates="orders")
-
-    items: Mapped[list["OrderItem"]] = relationship(
-        "OrderItem",
+    # Relationships
+    client: Mapped["Client"] = relationship(back_populates="orders")
+    processed_by: Mapped[Optional["Staff"]] = relationship(back_populates="processed_orders")
+    items: Mapped[List["OrderItem"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    invoice: Mapped[Optional["Invoice"]] = relationship(
         back_populates="order",
-        cascade="all, delete-orphan",
+        uselist=False
     )
 
-    status_changes: Mapped[list["OrderStatusHistory"]] = relationship(
-        "OrderStatusHistory",
-        back_populates="order",
-        cascade="all, delete-orphan",
-    )
-
-    requests: Mapped[list["UserRequest"]] = relationship(
-        "UserRequest",
-        back_populates="order",
-        cascade="all, delete-orphan"
-    )
-
-    # ---------- Proprietăți ----------
-    @property
-    def total_amount_mdl(self) -> Decimal:
-        """Calculează dinamically din OrderItem dacă vrei verificare."""
-        return sum(item.total_price_mdl for item in self.items)
-
-    # ---------- Validators ----------
-    @validates("status")
-    def validate_status(self, key, value: OrderStatus):
-        if self.status == OrderStatus.completed and value != OrderStatus.completed:
-            raise ValueError("O comandă finalizată nu poate fi modificată.")
-        return value
-
-    def __repr__(self):
-        return (
-            f"<Order(id={self.id}, client={self.client_id}, "
-            f"total_mdl={self.total_mdl}, status={self.status.value})>"
-        )
-
-
-"""
-
-DIN ALTA VIATA !!!!!!!!!!!
-
-# Metoda pentru a gestiona schimbarea statutului și pentru a crea o nouă înregistrare în OrderStatusHistory de fiecare dată când o comandă este modificată
-def change_status(self, new_status: OrderStatus, changed_by: int, session):
-    if self.status == new_status:
-        raise ValueError("Starea comenzii este deja setată la această valoare.")
-
-    # Creăm istoricul schimbării
-    status_history = OrderStatusHistory(
-        order_id=self.id,
-        old_status=self.status,
-        new_status=new_status,
-        changed_by=changed_by
-    )
-    session.add(status_history)
-
-    # Actualizăm starea comenzii
-    self.status = new_status
-    session.commit()
-
-"""
 

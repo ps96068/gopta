@@ -1,48 +1,58 @@
-from __future__ import annotations
+# schemas/user/staff.py
 
-import enum
+
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, constr
+from typing import Optional
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+
+from models import StaffRole
 
 
-class StaffRole(str, enum.Enum):
-    super_admin = "super_admin"
-    manager = "manager"
-    supervisor = "supervisor"
-
-
-Phone = constr(regex=r"^\+?[0-9]{7,15}$")  # type: ignore[valid-type]
-
-
-# ---------- Base ----------
+# Staff Schemas
 class StaffBase(BaseModel):
-    username: str
-    phone_number: Phone | None = None
-    email: EmailStr | None = None
-    role: StaffRole = StaffRole.supervisor
-    is_active: bool = True
-    telegram_id: str | None = None
+    """Schema de bază pentru Staff."""
+    first_name: str = Field(..., min_length=2, max_length=100)
+    last_name: str = Field(..., min_length=2, max_length=100)
+    phone: Optional[str] = Field(None, max_length=20)
+    role: StaffRole = Field(default=StaffRole.SUPERVISOR)
 
 
-# ---------- Create ----------
 class StaffCreate(StaffBase):
-    password_hash: str = Field(..., min_length=6)
+    """Schema pentru creare staff."""
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=100)
+
+    @field_validator('password')
+    def validate_password(cls, v):
+        """Validează complexitatea parolei."""
+        if not any(char.isdigit() for char in v):
+            raise ValueError('Parola trebuie să conțină cel puțin o cifră')
+        if not any(char.isupper() for char in v):
+            raise ValueError('Parola trebuie să conțină cel puțin o literă mare')
+        return v
 
 
-# ---------- Update ----------
-class StaffUpdate(BaseModel):
-    phone_number: Phone | None = None
-    email: EmailStr | None = None
-    role: StaffRole | None = None
-    is_active: bool | None = None
-    password_hash: str | None = Field(default=None, min_length=6)
+class StaffUpdate(StaffBase):
+    """Schema pentru actualizare staff."""
+    pass
 
 
-# ---------- Read ----------
-class StaffRead(StaffBase):
+class StaffLogin(BaseModel):
+    """Schema pentru autentificare staff."""
+    email: EmailStr
+    password: str
+
+
+class StaffResponse(BaseModel):
+    """Schema pentru răspuns staff (fără parolă)."""
     id: int
+    email: str
+    first_name: str
+    last_name: str
+    phone: Optional[str]
+    role: StaffRole
+    last_login: Optional[datetime]
     created_at: datetime
-    last_visit: datetime | None = None
+    is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

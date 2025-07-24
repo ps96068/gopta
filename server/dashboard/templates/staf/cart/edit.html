@@ -1,0 +1,276 @@
+<!-- server/dashboard/templates/cart/edit.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Editare Coș #{{ cart.id }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Editare Coș #{{ cart.id }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Listă Coșuri
+    </a>
+    <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-eye"></i> Vezi Detalii
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Cart Items -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart text-primary me-2"></i>
+                    Produse în Coș
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/update-all">
+                    {{ csrf_input|safe }}
+                    <div class="table-responsive">
+                        <table class="table mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Produs</th>
+                                    <th width="120" class="text-center">Cantitate</th>
+                                    <th width="120" class="text-end">Preț Unit.</th>
+                                    <th width="120" class="text-end">Subtotal</th>
+                                    <th width="80" class="text-center">Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cart.items %}
+                                <tr id="item-{{ item.id }}">
+                                    <td>
+                                        <div>
+                                            <a href="{{ dashboard_prefix }}/product/{{ item.product.id }}"
+                                               class="text-decoration-none">
+                                                <strong>{{ item.product.name }}</strong>
+                                            </a>
+                                            <br>
+                                            <small class="text-muted">
+                                                SKU: {{ item.product.sku }} |
+                                                {{ item.product.category.name }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number"
+                                               name="item_{{ item.id }}_quantity"
+                                               value="{{ item.quantity }}"
+                                               min="1" max="999"
+                                               class="form-control form-control-sm text-center quantity-input"
+                                               data-item-id="{{ item.id }}"
+                                               data-price="{{ item.price_snapshot }}"
+                                               style="width: 80px;">
+                                    </td>
+                                    <td class="text-end">
+                                        {{ item.price_snapshot|int }} MDL
+                                        <br>
+                                        <small class="text-muted">{{ item.price_type }}</small>
+                                    </td>
+                                    <td class="text-end item-subtotal">
+                                        <strong>{{ (item.price_snapshot * item.quantity)|int }} MDL</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-item"
+                                                data-item-id="{{ item.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="bg-light">
+                                <tr>
+                                    <td colspan="3" class="text-end">
+                                        <strong>TOTAL:</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <h5 class="mb-0 text-success" id="cartTotal">{{ cart_total|int }} MDL</h5>
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="card-footer bg-white">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ dashboard_prefix }}/cart/manage/{{ cart.id }}"
+                               class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle"></i> Adaugă Produse
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Salvează Modificările
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Info -->
+    <div class="col-lg-4">
+        <!-- Client Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-info me-2"></i>
+                    Informații Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-circle bg-{{ cart.client.status.value|lower }} text-white mx-auto mb-2"
+                         style="width: 60px; height: 60px; font-size: 24px;">
+                        {{ (cart.client.first_name or 'A')[0] }}{{ (cart.client.last_name or '')[0] }}
+                    </div>
+                    <h6>{{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</h6>
+                    <span class="badge bg-{{ cart.client.status.value|lower }}">
+                        {{ cart.client.status.value }}
+                    </span>
+                </div>
+
+                <dl class="row mb-0">
+                    {% if cart.client.email %}
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">{{ cart.client.email }}</dd>
+                    {% endif %}
+
+                    {% if cart.client.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">{{ cart.client.phone }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning text-warning me-2"></i>
+                    Acțiuni
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if cart.items %}
+                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/convert-to-order">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-cart-check"></i> Convertește în Comandă
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+
+                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/clear"
+                          onsubmit="return confirm('Sigur doriți să ștergeți acest coș complet?');">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="bi bi-trash"></i> Șterge Coșul
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+.table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.table tbody tr.removing {
+    opacity: 0.3;
+    background-color: #ffebee;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update subtotal when quantity changes
+document.querySelectorAll('.quantity-input').forEach(input => {
+    console.log("Update subtotal when quantity changes");
+    input.addEventListener('input', function() {
+        const price = parseFloat(this.dataset.price);
+        const quantity = parseInt(this.value) || 0;
+        const subtotal = price * quantity;
+
+        const row = this.closest('tr');
+        row.querySelector('.item-subtotal strong').textContent = `${Math.round(subtotal)} MDL`;
+
+        updateTotal();
+    });
+});
+
+// Remove item
+document.querySelectorAll('.remove-item').forEach(btn => {
+    console.log("Adding event listener to remove button");
+    btn.addEventListener('click', async function() {
+        if (!confirm('Eliminați acest produs din coș?')) return;
+
+        const itemId = this.dataset.itemId;
+        const row = document.getElementById(`item-${itemId}`);
+
+        row.classList.add('removing');
+
+        try {
+            const response = await fetch(`/dashboard/cart/{{ cart.id }}/remove-item/${itemId}`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                row.remove();
+                updateTotal();
+
+                // Check if cart is empty
+                if (document.querySelectorAll('tbody tr').length === 0) {
+                    location.reload();
+                }
+            }
+        } catch (error) {
+            row.classList.remove('removing');
+            alert('Eroare la eliminarea produsului');
+        }
+    });
+});
+
+// Update total
+function updateTotal() {
+    console.log('Updating total...');
+    let total = 0;
+    document.querySelectorAll('.quantity-input').forEach(input => {
+        const price = parseFloat(input.dataset.price);
+        const quantity = parseInt(input.value) || 0;
+        total += price * quantity;
+    });
+
+    document.getElementById('cartTotal').textContent = `${Math.round(total)} MDL`;
+}
+</script>
+{% endblock %}

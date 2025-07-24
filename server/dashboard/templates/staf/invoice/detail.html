@@ -1,0 +1,496 @@
+<!-- server/dashboard/templates/staff/invoice/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ invoice.display_name }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ invoice.display_name }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/invoice" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi la Listă
+    </a>
+
+    {% if invoice.is_quote and invoice.cart %}
+    <a href="{{ dashboard_prefix }}/cart/{{ invoice.cart.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-cart"></i> Vezi Coș
+    </a>
+    {% elif invoice.is_invoice and invoice.order %}
+    <a href="{{ dashboard_prefix }}/order/{{ invoice.order.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-cart-check"></i> Vezi Comandă
+    </a>
+    {% endif %}
+
+    <button class="btn btn-sm btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Alerts -->
+
+{% if request.query_params.get('success') == 'quote_created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Ofertă generată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'invoice_created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Factură generată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'sent' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Document trimis cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'cancelled' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Factură anulată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if invoice.is_cancelled %}
+<div class="alert alert-danger">
+    <h5><i class="bi bi-x-circle"></i> Factură Anulată</h5>
+    <p class="mb-2">Această factură a fost anulată la: <strong>{{ invoice.cancelled_at|datetime_local }}</strong></p>
+    <p class="mb-2"><strong>Motiv:</strong> {{ invoice.cancellation_reason }}</p>
+    {% if invoice.cancelled_by_id %}
+    <p class="mb-0"><small class="text-muted">Anulată de: Staff ID #{{ invoice.cancelled_by_id }}</small></p>
+    {% endif %}
+</div>
+{% endif %}
+
+
+
+<!-- FINISH Alerts -->
+
+<div class="row g-4">
+    <!-- Left Column - Invoice Preview -->
+    <div class="col-lg-8">
+        <!-- Document Preview -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-text text-primary me-2"></i>
+                    Preview Document
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Invoice Header -->
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <h3 class="text-primary">PCE Distribution SRL</h3>
+                        <p class="text-muted mb-0">
+                            str. Mihai Eminescu 47, Chișinău<br>
+                            Tel: +373 22 123 456<br>
+                            Email: contact@pce.md
+                        </p>
+                    </div>
+                    <div class="col-6 text-end">
+                        <h4 class="{% if invoice.is_quote %}text-warning{% else %}text-success{% endif %}">
+                            {{ invoice.invoice_type.value|upper }}
+                        </h4>
+                        <p class="mb-0">
+                            <strong>{{ invoice.invoice_number }}</strong><br>
+                            Data: {{ invoice.created_at|date_only }}
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Client Info -->
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <h6 class="text-muted">CLIENT</h6>
+                        <p>
+                            <strong>{{ invoice.client_name }}</strong><br>
+                            {{ invoice.client_email }}<br>
+                            {% if invoice.client_phone %}{{ invoice.client_phone }}<br>{% endif %}
+                            {% if invoice.client_company %}{{ invoice.client_company }}{% endif %}
+                        </p>
+                    </div>
+                    <div class="col-6">
+                        {% if invoice.is_quote %}
+                        <h6 class="text-muted">VALIDITATE</h6>
+                        <p>
+                            <strong>Valabil până la:</strong><br>
+                            <span class="text-danger">{{ invoice.valid_until|date_only }}</span>
+
+                            {% if is_expired %}
+                            <br><span class="badge bg-danger">EXPIRAT</span>
+                            {% endif %}
+                        </p>
+                        {% elif invoice.order %}
+                        <h6 class="text-muted">COMANDĂ</h6>
+                        <p>
+                            <strong>Nr. comandă:</strong> #{{ invoice.order.order_number }}<br>
+                            <strong>Status:</strong> {{ invoice.order.status.value|title }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Produs</th>
+                                <th width="80" class="text-center">Cant.</th>
+                                <th width="120" class="text-end">Preț unit.</th>
+                                <th width="120" class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.product.name if item.product else item.product_name }}</strong><br>
+                                    <small class="text-muted">
+                                        SKU: {{ item.product.sku if item.product else item.product_sku }}
+                                    </small>
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">
+                                    {{ item.price_snapshot|int if item.price_snapshot else item.unit_price|int }} MDL
+                                </td>
+                                <td class="text-end">
+                                    {% if item.price_snapshot %}
+                                        {{ (item.price_snapshot * item.quantity)|int }} MDL
+                                    {% else %}
+                                        {{ item.subtotal|int }} MDL
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end">{{ subtotal|int }} MDL</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>TVA (20%):</strong></td>
+                                <td class="text-end">{{ tva_amount|int }} MDL</td>
+                            </tr>
+                            <tr class="table-active">
+                                <td colspan="3" class="text-end"><h5>TOTAL:</h5></td>
+                                <td class="text-end"><h5 class="text-success">{{ total|int }} MDL</h5></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Notes -->
+                {% if invoice.notes %}
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> Observații</h6>
+                    <p class="mb-0">{{ invoice.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Actions & Info -->
+    <div class="col-lg-4">
+        <!-- Status & Actions -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear text-primary me-2"></i>
+                    Status & Acțiuni
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Status Display -->
+                <div class="text-center mb-3">
+                    {% if invoice.is_quote %}
+                        {% if invoice.converted_to_order %}
+                            <div class="badge bg-success fs-6 p-3">
+                                <i class="bi bi-check-circle"></i> CONVERTITĂ
+                            </div>
+                        {% elif is_expired %}
+                            <div class="badge bg-danger fs-6 p-3">
+                                <i class="bi bi-x-circle"></i> EXPIRATĂ
+                            </div>
+                        {% else %}
+                            <div class="badge bg-warning fs-6 p-3">
+                                <i class="bi bi-clock"></i> ACTIVĂ
+                            </div>
+                        {% endif %}
+                    {% else %}
+
+                        {% if invoice.is_cancelled %}
+                            <div class="badge bg-danger fs-6 p-3">
+                                <i class="bi bi-x-circle"></i> ANULATĂ
+                            </div>
+                        {% else %}
+                            <div class="badge bg-info fs-6 p-3">
+                                <i class="bi bi-receipt"></i> EMISĂ
+                            </div>
+                        {% endif %}
+
+                    {% endif %}
+
+
+
+
+                </div>
+
+                <!-- Actions -->
+
+                <div class="d-grid gap-2">
+
+                    {% if not invoice.is_cancelled %}
+
+                        <!-- Download PDF -->
+                        <a href="{{ dashboard_prefix }}/invoice/{{ invoice.id }}/download"
+                           class="btn btn-primary">
+                            <i class="bi bi-download"></i> Descarcă PDF
+                        </a>
+
+                        <!-- Send -->
+                        {% if not invoice.sent_at %}
+                        <button class="btn btn-info" onclick="showSendModal()">
+                            <i class="bi bi-send"></i> Trimite Document
+                        </button>
+                        {% else %}
+                        <button class="btn btn-outline-info" onclick="showSendModal()">
+                            <i class="bi bi-send-check"></i> Retrimite
+                        </button>
+                        {% endif %}
+
+                        <!-- Convert to Order (for active quotes) -->
+                        {% if invoice.is_quote and not invoice.converted_to_order and not is_expired %}
+                        <form method="post" action="{{ dashboard_prefix }}/invoice/quote/{{ invoice.id }}/convert">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-success w-100"
+                                    onclick="return confirm('Convertiți oferta în comandă?');">
+                                <i class="bi bi-arrow-right-circle"></i> Convertește în Comandă
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <!-- Delete (only for quotes) -->
+                        {% if can_delete(user, 'invoice') and invoice.is_quote and not invoice.converted_to_order %}
+                        <form method="post" action="{{ dashboard_prefix }}/invoice/{{ invoice.id }}/delete">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    onclick="return confirm('Sigur ștergeți această ofertă?');">
+                                <i class="bi bi-trash"></i> Șterge
+                            </button>
+                        </form>
+                        {% endif %}
+
+                    {% else %}
+
+                        <div class="alert alert-warning text-center">
+                            <i class="bi bi-info-circle"></i>
+                                Nu sunt disponibile acțiuni pentru facturi anulate.
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+                <!-- FINIS Actions -->
+
+            </div>
+        </div>
+
+        <!-- Document Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle text-info me-2"></i>
+                    Informații Document
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">Tip:</dt>
+                    <dd class="col-6">
+                        <span class="badge bg-{{ 'primary' if invoice.is_quote else 'success' }}">
+                            {{ invoice.invoice_type.value|title }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-6">Număr:</dt>
+                    <dd class="col-6">{{ invoice.invoice_number }}</dd>
+
+                    <dt class="col-6">Creat la:</dt>
+                    <dd class="col-6">{{ invoice.created_at|datetime_local }}</dd>
+
+                    {% if invoice.sent_at %}
+                    <dt class="col-6">Trimis la:</dt>
+                    <dd class="col-6">
+                        {{ invoice.sent_at|datetime_local }}<br>
+                        <small class="text-muted">Via: {{ invoice.sent_via }}</small>
+                    </dd>
+                    {% endif %}
+
+                    {% if invoice.is_quote %}
+                    <dt class="col-6">Valabil până:</dt>
+                    <dd class="col-6">
+                        {{ invoice.valid_until|date_only }}
+                        {% if is_expired %}
+                        <br><span class="badge bg-danger">Expirat</span>
+                        {% endif %}
+                    </dd>
+                    {% endif %}
+
+                    {% if invoice.converted_to_order %}
+                    <dt class="col-6">Convertit la:</dt>
+                    <dd class="col-6">{{ invoice.converted_at|datetime_local }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <!-- Client Summary -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-warning me-2"></i>
+                    Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>{{ invoice.client_name }}</strong>
+                </p>
+                {% if client %}
+                <p class="mb-0">
+                    <small class="text-muted">
+                        Status: <span class="badge bg-{{ client.status.value|lower }}">
+                            {{ client.status.value }}
+                        </span>
+                    </small>
+                </p>
+                <div class="d-grid mt-3">
+                    <a href="{{ dashboard_prefix }}/client/{{ client.id }}"
+                       class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-person"></i> Vezi Profil Client
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Modal -->
+<div class="modal fade" id="sendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ dashboard_prefix }}/invoice/{{ invoice.id }}/send">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-send text-info"></i> Trimite {{ invoice.invoice_type.value|title }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Către: <strong>{{ invoice.client_name }}</strong></p>
+
+                    <div class="mb-3">
+                        <label class="form-label">Metoda de trimitere:</label>
+
+                        {% if invoice.client_email %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="method"
+                                   id="methodEmail" value="email" checked>
+                            <label class="form-check-label" for="methodEmail">
+                                <i class="bi bi-envelope"></i> Email ({{ invoice.client_email }})
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        {% if client and client.telegram_id %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="method"
+                                   id="methodTelegram" value="telegram"
+                                   {% if not invoice.client_email %}checked{% endif %}>
+                            <label class="form-check-label" for="methodTelegram">
+                                <i class="bi bi-telegram"></i> Telegram
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        {% if invoice.client_email and client and client.telegram_id %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="method"
+                                   id="methodBoth" value="both">
+                            <label class="form-check-label" for="methodBoth">
+                                <i class="bi bi-send-check"></i> Ambele canale
+                            </label>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if invoice.sent_at %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Acest document a fost deja trimis la {{ invoice.sent_at|datetime_local }}
+                        via {{ invoice.sent_via }}.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Trimite
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+@media print {
+    .btn, .modal, .alert, .card-header, .col-lg-4 {
+        display: none !important;
+    }
+    .col-lg-8 {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showSendModal() {
+    const modal = new bootstrap.Modal(document.getElementById('sendModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

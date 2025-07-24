@@ -1,0 +1,156 @@
+<!-- server/dashboard/templates/staf/analytics/users.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Analiză Utilizatori - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Analiză Utilizatori{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group me-2">
+    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-funnel"></i>
+        {% if current_status %}{{ current_status|capitalize }}{% else %}Toate statusurile{% endif %}
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="?days={{ current_period }}">Toate statusurile</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="?days={{ current_period }}&status=anonim">Anonim</a></li>
+        <li><a class="dropdown-item" href="?days={{ current_period }}&status=user">User</a></li>
+        <li><a class="dropdown-item" href="?days={{ current_period }}&status=instalator">Instalator</a></li>
+        <li><a class="dropdown-item" href="?days={{ current_period }}&status=pro">Pro</a></li>
+    </ul>
+</div>
+
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-calendar"></i> {{ current_period }} zile
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="?days=7{% if current_status %}&status={{ current_status }}{% endif %}">Ultima săptămână</a></li>
+        <li><a class="dropdown-item" href="?days=30{% if current_status %}&status={{ current_status }}{% endif %}">Ultima lună</a></li>
+        <li><a class="dropdown-item" href="?days=90{% if current_status %}&status={{ current_status }}{% endif %}">Ultimele 3 luni</a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-users">
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ users|length }}</h3>
+                    <small class="text-muted">Total utilizatori</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ users|selectattr('sessions_count', '>', 0)|list|length }}</h3>
+                    <small class="text-muted">Utilizatori activi</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ users|map(attribute='sessions_count')|sum }}</h3>
+                    <small class="text-muted">Total sesiuni</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ users|map(attribute='total_pageviews')|sum }}</h3>
+                    <small class="text-muted">Total page views</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <h5 class="mb-0">Utilizatori înregistrați</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nume</th>
+                            <th>Telegram ID</th>
+                            <th>Status</th>
+                            <th>Sesiuni</th>
+                            <th>Page Views</th>
+                            <th>Înregistrat</th>
+                            <th>Ultima activitate</th>
+                            <th class="text-center">Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>
+                                <a href="{{ url_for('client_detail', id=user.id) }}" class="text-decoration-none">
+                                    {{ user.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <code>{{ user.telegram_id }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{
+                                    'secondary' if user.status == 'anonim' else
+                                    'info' if user.status == 'user' else
+                                    'success' if user.status == 'instalator' else
+                                    'warning'
+                                }}">
+                                    {{ user.status }}
+                                </span>
+                            </td>
+                            <td>{{ user.sessions_count }}</td>
+                            <td>{{ user.total_pageviews }}</td>
+                            <td>
+                                <small>{{ user.created_at.strftime('%d.%m.%Y') }}</small>
+                            </td>
+                            <td>
+                                {% if user.last_activity %}
+                                    <small>{{ user.last_activity.strftime('%d.%m.%Y %H:%M') }}</small>
+                                {% else %}
+                                    <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('user_journey', client_id=user.id, days=current_period) }}"
+                                       class="btn btn-outline-primary"
+                                       title="Vezi journey">
+                                        <i class="bi bi-diagram-3"></i>
+                                    </a>
+                                    <a href="{{ url_for('client_detail', id=user.id) }}"
+                                       class="btn btn-outline-info"
+                                       title="Vezi profil">
+                                        <i class="bi bi-person"></i>
+                                    </a>
+                                    <a href="{{ url_for('order_list') }}?client_id={{ user.id }}"
+                                       class="btn btn-outline-success"
+                                       title="Vezi comenzi">
+                                        <i class="bi bi-cart"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

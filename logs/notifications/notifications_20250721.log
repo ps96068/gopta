@@ -1,0 +1,5 @@
+2025-07-21 09:25:36,746 - INFO - SYSTEM: WebSocket notification manager available
+2025-07-21 12:49:28,807 - INFO - SYSTEM: WebSocket notification manager available
+2025-07-21 12:50:49,382 - INFO - ORDER_CREATED: Cont-20250721-0001 | Client: Instal Test1 (ID: 15) | Total: 3103.45 MDL | Items: 2
+2025-07-21 12:50:49,383 - INFO - NOTIFICATION_SENT: Order Cont-20250721-0001 | Channel: WebSocket | Status: SUCCESS
+2025-07-21 12:50:49,949 - INFO - NOTIFICATION_SAVED: Order Cont-20250721-0001 | Channel: Database | Status: PENDING

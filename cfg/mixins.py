@@ -1,29 +1,17 @@
-from sqlalchemy import ForeignKey, event
+# cfg/mixins.py
+
+from __future__ import annotations
+from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column
-from utils.context import current_staff_id
-
-class AuditMixin:
-    """
-    Adaugă automat:
-      created_by  – staff ID la inserare
-      modified_by – staff ID la orice update
-    """
-    created_by: Mapped[int | None] = mapped_column(
-        ForeignKey("staff.id"), nullable=True
-    )
-    modified_by: Mapped[int | None] = mapped_column(
-        ForeignKey("staff.id"), nullable=True
-    )
+from sqlalchemy import DateTime, Boolean, func
 
 
-# ─── Listener global aplicat tuturor claselor ce moștenesc AuditMixin ───
-@event.listens_for(AuditMixin, "before_insert", propagate=True)
-def _set_created_by(mapper, connection, target):
-    staff_id = current_staff_id.get()
-    if target.created_by is None:
-        target.created_by = staff_id
-    target.modified_by = staff_id   # inițial identic
+class CreatedAtMixin:
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-@event.listens_for(AuditMixin, "before_update", propagate=True)
-def _set_modified_by(mapper, connection, target):
-    target.modified_by = current_staff_id.get()
+
+class UpdatedAtMixin:
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class IsActiveMixin:
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

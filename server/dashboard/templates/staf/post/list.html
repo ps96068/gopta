@@ -1,0 +1,455 @@
+<!-- server/dashboard/templates/staf/post/list.html -->
+
+{% extends "base_staff.html" %}
+
+{% block title %}Articole Blog - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Articole Blog{% endblock %}
+
+{% block page_actions %}
+{% if can_create(staff, 'post') %}
+<a href="{{ url_for('post_create_form') }}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>Articol Nou
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Articol creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" action="{{ url_for('post_list') }}" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Caută</label>
+                <input type="text" name="search" class="form-control"
+                       placeholder="Titlu, conținut..." value="{{ search or '' }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Autor</label>
+                <select name="author_id" class="form-select">
+                    <option value="">Toți autorii</option>
+                    {% for author in authors %}
+                    <option value="{{ author.id }}"
+                            {% if author_id == author.id %}selected{% endif %}>
+                        {{ author.first_name }} {{ author.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Featured</label>
+                <select name="is_featured" class="form-select">
+                    <option value="">Toate</option>
+                    <option value="true" {% if is_featured == True %}selected{% endif %}>Da</option>
+                    <option value="false" {% if is_featured == False %}selected{% endif %}>Nu</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="is_active" class="form-select">
+                    <option value="">Toate</option>
+                    <option value="true" {% if is_active == True %}selected{% endif %}>Publicate</option>
+                    <option value="false" {% if is_active == False %}selected{% endif %}>Draft</option>
+                </select>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>Caută
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+{% if request.query_params.get('success') == 'deleted' %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle me-1"></i>Articol șters cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Articles Grid -->
+{% if posts %}
+<div class="row g-4">
+    {% for post in posts %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm post-card">
+            <!-- Featured Image -->
+            <div class="post-image-wrapper position-relative" style="height: 200px; overflow: hidden;">
+                {% if post.featured_image %}
+                <img src="/{{ post.featured_image.image_path }}"
+                     class="card-img-top w-100 h-100"
+                     style="object-fit: cover;"
+                     alt="{{ post.featured_image.alt_text or post.title }}">
+                {% else %}
+                <img src="/static/webapp/img/blog/blog_default.png"
+                     class="card-img-top w-100 h-100"
+                     style="object-fit: cover;"
+                     alt="{{ post.title }}">
+                {% endif %}
+
+                <!-- Badges -->
+                <div class="position-absolute top-0 start-0 p-2">
+                    {% if post.is_featured %}
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-star-fill"></i> Featured
+                    </span>
+                    {% endif %}
+                    {% if not post.is_active %}
+                    <span class="badge bg-secondary">Draft</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ post.title }}</h5>
+
+                {% if post.excerpt %}
+                <p class="card-text text-muted small flex-grow-1">
+                    {{ post.excerpt[:100] }}{% if post.excerpt|length > 100 %}...{% endif %}
+                </p>
+                {% endif %}
+
+                <!-- Meta info -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-person me-1"></i>{{ post.author.first_name }} {{ post.author.last_name }}
+                    </small>
+                    <small class="text-muted">
+                        <i class="bi bi-eye me-1"></i>{{ post.view_count }}
+                    </small>
+                </div>
+
+                <div class="text-muted small mb-3">
+                    <i class="bi bi-calendar me-1"></i>{{ post.created_at|datetime_local }}
+                </div>
+
+                <!-- Actions -->
+                <div class="btn-group w-100" role="group">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            onclick="showPreview({{ post.id }})"
+                            title="Preview">
+                        <i class="bi bi-eye"></i>
+                    </button>
+
+                    {% if can_update(staff, 'post') %}
+                    <a href="{{ url_for('post_edit_form', post_id=post.id) }}"
+                       class="btn btn-outline-primary btn-sm"
+                       title="Editează">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+
+                    <a href="{{ url_for('post_images_list', post_id=post.id) }}"
+                       class="btn btn-outline-primary btn-sm"
+                       title="Imagini">
+                        <i class="bi bi-images"></i>
+                    </a>
+
+                    {% if staff.role.value == 'super_admin' %}
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            onclick="toggleActive({{ post.id }})"
+                            title="{% if post.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                        {% if post.is_active %}
+                        <i class="bi bi-toggle-on"></i>
+                        {% else %}
+                        <i class="bi bi-toggle-off"></i>
+                        {% endif %}
+                    </button>
+                    {% endif %}
+
+                    {% if can_delete(staff, 'post') %}
+                    <button type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            onclick="confirmDelete({{ post.id }})"
+                            title="Șterge">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-file-text display-1 text-muted"></i>
+        <h5 class="mt-3">Nu există articole</h5>
+        <p class="text-muted">
+            {% if search or author_id or is_featured is not none or is_active is not none %}
+                Nu am găsit articole care să corespundă criteriilor de căutare.
+                <br>
+                <a href="{{ url_for('post_list') }}" class="btn btn-link">Resetează filtrele</a>
+            {% else %}
+                Nu există articole create încă.
+            {% endif %}
+        </p>
+        {% if can_create(staff, 'post') %}
+        <a href="{{ url_for('post_create_form') }}" class="btn btn-primary mt-3">
+            <i class="bi bi-plus-circle me-1"></i>Creează primul articol
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}&search={{ search or '' }}&author_id={{ author_id or '' }}&is_featured={{ is_featured or '' }}&is_active={{ is_active or '' }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p <= 3 or p > total_pages - 3 or (p > page - 2 and p < page + 2) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}&search={{ search or '' }}&author_id={{ author_id or '' }}&is_featured={{ is_featured or '' }}&is_active={{ is_active or '' }}">
+                    {{ p }}
+                </a>
+            </li>
+            {% elif p == 4 or p == total_pages - 3 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}&search={{ search or '' }}&author_id={{ author_id or '' }}&is_featured={{ is_featured or '' }}&is_active={{ is_active or '' }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmare ștergere</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sigur doriți să ștergeți acest articol?</p>
+                <p class="text-danger"><strong>Atenție:</strong> Această acțiune este ireversibilă!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {{ csrf_input | safe }}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Șterge
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Preview Articol</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Se încarcă...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Închide
+                </button>
+                <a href="#" id="editFromPreview" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Editează
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .post-card {
+        transition: transform 0.2s;
+    }
+    .post-card:hover {
+        transform: translateY(-5px);
+    }
+    .post-image-wrapper {
+        background: #f8f9fa;
+    }
+
+    /* Preview Modal Styles */
+    #previewModal .modal-body {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .blog-post {
+        font-size: 1.1rem;
+        line-height: 1.7;
+    }
+
+    .post-content h2 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .post-content h3 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5rem auto;
+        border-radius: 0.375rem;
+    }
+
+    .post-content p {
+        margin-bottom: 1rem;
+    }
+
+    .google-preview {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+    }
+
+    .google-preview .url {
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+
+    .google-preview .title {
+        font-size: 20px;
+        font-weight: normal;
+        margin: 0 0 3px 0;
+        text-decoration: none;
+    }
+
+    .google-preview .description {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Get CSRF token from cookie
+function getCSRFToken() {
+    const name = "csrf_token=";
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+function confirmDelete(postId) {
+    const form = document.getElementById('deleteForm');
+    form.action = `/dashboard/staff/post/${postId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+async function toggleActive(postId) {
+    try {
+        const response = await fetch(`/dashboard/staff/post/${postId}/toggle-active`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': getCSRFToken(),
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || 'Eroare la schimbarea statusului');
+        }
+    } catch (error) {
+        alert('Eroare: ' + error.message);
+    }
+}
+
+// Show preview in modal
+async function showPreview(postId) {
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    const contentDiv = document.getElementById('previewContent');
+    const editBtn = document.getElementById('editFromPreview');
+
+    // Set edit button URL
+    editBtn.href = `/dashboard/staff/post/${postId}/edit`;
+
+    // Show loading
+    contentDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Se încarcă...</span>
+            </div>
+        </div>
+    `;
+
+    // Show modal
+    modal.show();
+
+    try {
+        // Fetch preview content
+        const response = await fetch(`/dashboard/staff/post/${postId}/preview?modal=true`);
+        if (!response.ok) {
+            throw new Error('Failed to load preview');
+        }
+
+        const html = await response.text();
+        contentDiv.innerHTML = html;
+
+    } catch (error) {
+        contentDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle"></i> Eroare la încărcarea preview-ului
+            </div>
+        `;
+    }
+}
+</script>
+{% endblock %}

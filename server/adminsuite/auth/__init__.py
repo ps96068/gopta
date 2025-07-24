@@ -1,1 +1,0 @@
-from .admin_panel_auth import AdminAuthProvider

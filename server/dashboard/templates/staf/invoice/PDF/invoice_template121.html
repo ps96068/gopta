@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Factură {{ invoice.invoice_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #2c3e50;
+        }
+
+        .company-info {
+            flex: 1;
+        }
+
+        .company-name {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .company-details {
+            font-size: 10pt;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .document-info {
+            text-align: right;
+            flex: 0 0 300px;
+        }
+
+        .document-title {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .document-number {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .document-date {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        /* Invoice Details */
+        .invoice-details {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .details-section {
+            flex: 1;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .info-row {
+            margin-bottom: 5px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            display: inline-block;
+            width: 100px;
+        }
+
+        /* Items Table */
+        .items-section {
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th {
+            background-color: #27ae60;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        th.text-center {
+            text-align: center;
+        }
+
+        th.text-right {
+            text-align: right;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        td.text-center {
+            text-align: center;
+        }
+
+        td.text-right {
+            text-align: right;
+        }
+
+        .item-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .item-sku {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        /* Totals */
+        .totals-section {
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+
+        .totals-table {
+            margin-left: auto;
+            width: 350px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .total-row.subtotal-section {
+            border-top: 2px solid #dee2e6;
+            margin-top: 10px;
+            padding-top: 10px;
+        }
+
+        .total-row.final {
+            border-bottom: 3px double #27ae60;
+            border-top: 3px double #27ae60;
+            margin-top: 10px;
+            padding: 12px 0;
+            font-size: 18pt;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        /* Payment Info */
+        .payment-info {
+            background-color: #e8f5e9;
+            border: 2px solid #27ae60;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+
+        .payment-details {
+            margin-top: 10px;
+        }
+
+        /* Notes */
+        .notes-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+
+        .notes-content {
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .signature-box {
+            width: 300px;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #333;
+            margin-bottom: 5px;
+            height: 40px;
+        }
+
+        .signature-label {
+            font-size: 10pt;
+            color: #666;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 10pt;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        /* Print specific */
+        @media print {
+            body {
+                font-size: 11pt;
+            }
+
+            .header {
+                page-break-after: avoid;
+            }
+
+            table {
+                page-break-inside: avoid;
+            }
+
+            .signature-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-info">
+                <div class="company-name">{{ company.name }}</div>
+                <div class="company-details">
+                    {{ company.address }}<br>
+                    Tel: {{ company.phone }} | Email: {{ company.email }}<br>
+                    CUI: {{ company.cui }} | IBAN: {{ company.iban }}
+                </div>
+            </div>
+            <div class="document-info">
+                <div class="document-title">FACTURĂ FISCALĂ</div>
+                <div class="document-number">{{ invoice.invoice_number }}</div>
+                <div class="document-date">Data: {{ invoice.created_at|date_ro }}</div>
+            </div>
+        </div>
+
+        <!-- Invoice Details -->
+        <div class="invoice-details">
+            <div class="details-section">
+                <div class="section-title">DATE CLIENT</div>
+                <div class="info-row">
+                    <span class="info-label">Nume:</span>
+                    {{ invoice.client_name }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    {{ invoice.client_email }}
+                </div>
+                {% if invoice.client_phone %}
+                <div class="info-row">
+                    <span class="info-label">Telefon:</span>
+                    {{ invoice.client_phone }}
+                </div>
+                {% endif %}
+                {% if invoice.client_company %}
+                <div class="info-row">
+                    <span class="info-label">Companie:</span>
+                    {{ invoice.client_company }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="details-section">
+                <div class="section-title">DETALII COMANDĂ</div>
+                <div class="info-row">
+                    <span class="info-label">Nr. Comandă:</span>
+                    #{{ invoice.order.order_number if invoice.order else 'N/A' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Data Comandă:</span>
+                    {{ invoice.order.created_at|date_ro if invoice.order else 'N/A' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    {{ invoice.order.status.value|upper if invoice.order else 'N/A' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="items-section">
+            <div class="section-title">PRODUSE FACTURATE</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="50">Nr.</th>
+                        <th>Denumire produs / Cod</th>
+                        <th width="80" class="text-center">Cant.</th>
+                        <th width="100" class="text-right">Preț unit.</th>
+                        <th width="120" class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>
+                            <div class="item-name">{{ item.name }}</div>
+                            <div class="item-sku">Cod: {{ item.sku }}</div>
+                        </td>
+                        <td class="text-center">{{ item.quantity }}</td>
+                        <td class="text-right">{{ item.unit_price|int }} MDL</td>
+                        <td class="text-right">{{ item.subtotal|int }} MDL</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <div class="totals-table">
+                <div class="total-row">
+                    <span>Subtotal fără TVA:</span>
+                    <span>{{ (subtotal / 1.2)|int }} MDL</span>
+                </div>
+                <div class="total-row">
+                    <span>TVA (20%):</span>
+                    <span>{{ (subtotal - subtotal / 1.2)|int }} MDL</span>
+                </div>
+                <div class="total-row subtotal-section">
+                    <span>Subtotal cu TVA:</span>
+                    <span>{{ subtotal|int }} MDL</span>
+                </div>
+                <div class="total-row final">
+                    <span>TOTAL DE PLATĂ:</span>
+                    <span>{{ total|int }} MDL</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Info -->
+        <div class="payment-info">
+            <div class="section-title">INFORMAȚII PLATĂ</div>
+            <div class="payment-details">
+                <div class="info-row">
+                    <span class="info-label">Beneficiar:</span>
+                    {{ company.name }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cod fiscal:</span>
+                    {{ company.cui }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cont IBAN:</span>
+                    {{ company.iban }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Referință:</span>
+                    {{ invoice.invoice_number }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {% if invoice.notes %}
+        <div class="notes-section">
+            <div class="section-title">OBSERVAȚII</div>
+            <div class="notes-content">{{ invoice.notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Footer with Signatures -->
+        <div class="footer">
+            <div class="signature-section">
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Furnizor</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Cumpărător</div>
+                </div>
+            </div>
+
+            <div class="footer-text">
+                <p>Vă mulțumim pentru încrederea acordată!</p>
+                <p style="margin-top: 10px;">
+                    Document generat electronic la {{ generated_at.strftime('%d.%m.%Y %H:%M') }}<br>
+                    Factură valabilă fără semnătură și ștampilă conform Legii nr. 227/2015
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

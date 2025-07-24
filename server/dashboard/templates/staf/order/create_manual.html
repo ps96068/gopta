@@ -1,0 +1,396 @@
+<!-- server/dashboard/templates/staff/order/create_manual.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/order/create?client_id={{ client.id }}" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left: Product Selection -->
+    <div class="col-lg-8">
+        <!-- Search and Filters -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <input type="search" id="productSearch" class="form-control"
+                               placeholder="Caută produs (nume sau SKU)...">
+                    </div>
+                    <div class="col-md-4">
+                        <select id="categoryFilter" class="form-select">
+                            <option value="">Toate categoriile</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary w-100" onclick="searchProducts()">
+                            <i class="bi bi-search"></i> Caută
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Results -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    Selectează Produse
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="productResults">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-search fs-1"></i>
+                        <p class="mt-2">Folosiți căutarea pentru a găsi produse</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Order Summary -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-receipt text-success me-2"></i>
+                    Rezumat Comandă
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Client Info -->
+                <div class="mb-3">
+                    <h6>Client:</h6>
+                    <p class="mb-0">
+                        <strong>{{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}</strong><br>
+                        <span class="badge bg-{{ client.status.value|lower }}">
+                            {{ client.status.value }}
+                        </span>
+                        {% if client.email %}
+                        <br><small class="text-muted">{{ client.email }}</small>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <hr>
+
+                <!-- Selected Items -->
+                <h6>Produse Selectate:</h6>
+                <div id="selectedItems" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted text-center" id="emptyOrder">Niciun produs selectat</p>
+                </div>
+
+                <hr>
+
+                <!-- Total -->
+                <div class="d-flex justify-content-between mb-3">
+                    <h5>Total:</h5>
+                    <h5 class="text-success" id="orderTotal">0 MDL</h5>
+                </div>
+
+                <!-- Form Submit -->
+                <form method="post" action="{{ dashboard_prefix }}/order/create-manual" id="createOrderForm">
+                    {{ csrf_input|safe }}
+                    <input type="hidden" name="client_id" value="{{ client.id }}">
+                    <input type="hidden" name="products_data" id="productsData" value="[]">
+
+                    <div class="mb-3">
+                        <label class="form-label">Notă comandă (opțional)</label>
+                        <textarea name="client_note" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                            <i class="bi bi-check-circle"></i> Creează Comanda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Row Template (hidden) - NU MAI ESTE FOLOSIT -->
+
+<!-- Selected Item Template (hidden) -->
+<template id="selectedItemTemplate">
+    <div class="selected-item d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom">
+        <div class="flex-grow-1">
+            <small class="d-block fw-bold item-name"></small>
+            <small class="text-muted">
+                <span class="item-quantity"></span> x <span class="item-price"></span> MDL
+            </small>
+        </div>
+        <div class="text-end">
+            <strong class="item-total"></strong> MDL
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2 remove-item">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global state
+let selectedProducts = [];
+let clientStatus = '{{ client.status.value }}';
+
+// Search products via API
+async function searchProducts() {
+    const query = document.getElementById('productSearch').value;
+    const categoryId = document.getElementById('categoryFilter').value;
+
+    const resultsDiv = document.getElementById('productResults');
+    resultsDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
+
+    try {
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (categoryId) params.append('category_id', categoryId);
+
+        const response = await fetch(`{{ dashboard_prefix }}/order/api/products/search?${params}`);
+        const products = await response.json();
+
+        displayProducts(products);
+    } catch (error) {
+        resultsDiv.innerHTML = '<div class="alert alert-danger">Eroare la căutare produse</div>';
+    }
+}
+
+// Display product results in grid
+function displayProducts(products) {
+    const resultsDiv = document.getElementById('productResults');
+
+    if (products.length === 0) {
+        resultsDiv.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2">Nu s-au găsit produse</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Create grid container
+    resultsDiv.innerHTML = '<div class="row g-3" id="productsGrid"></div>';
+    const gridContainer = document.getElementById('productsGrid');
+
+    products.forEach(product => {
+        const productCard = document.createElement('div');
+        productCard.className = 'col-md-6 col-lg-4';
+
+        productCard.innerHTML = `
+            <div class="card h-100 product-card">
+                <div class="card-body">
+                    <h6 class="card-title">${product.name}</h6>
+                    <p class="text-muted small mb-2">
+                        SKU: ${product.sku}<br>
+                        ${product.category}
+                    </p>
+                    <div class="mb-3">
+                        <div class="h5 mb-0 text-success">${product.price} MDL</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="input-group input-group-sm" style="width: 120px;">
+                            <button class="btn btn-outline-secondary qty-decrease" type="button">-</button>
+                            <input type="number" class="form-control text-center qty-input"
+                                   value="1" min="1" max="999" data-product-id="${product.id}">
+                            <button class="btn btn-outline-secondary qty-increase" type="button">+</button>
+                        </div>
+                        <button class="btn btn-sm btn-primary flex-grow-1 add-product"
+                                data-product='${JSON.stringify(product).replace(/'/g, "&apos;")}'>
+                            <i class="bi bi-cart-plus"></i> Adaugă
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        gridContainer.appendChild(productCard);
+
+        // Add event listeners
+        const qtyInput = productCard.querySelector('.qty-input');
+        const decreaseBtn = productCard.querySelector('.qty-decrease');
+        const increaseBtn = productCard.querySelector('.qty-increase');
+        const addBtn = productCard.querySelector('.add-product');
+
+        decreaseBtn.onclick = () => {
+            if (qtyInput.value > 1) {
+                qtyInput.value = parseInt(qtyInput.value) - 1;
+            }
+        };
+
+        increaseBtn.onclick = () => {
+            qtyInput.value = parseInt(qtyInput.value) + 1;
+        };
+
+        addBtn.onclick = function() {
+            const productData = JSON.parse(this.dataset.product);
+            const quantity = parseInt(qtyInput.value);
+
+            addProductToOrder(productData, quantity);
+
+            // Flash success
+            this.innerHTML = '<i class="bi bi-check"></i> Adăugat';
+            this.classList.remove('btn-primary');
+            this.classList.add('btn-success');
+
+            setTimeout(() => {
+                this.innerHTML = '<i class="bi bi-cart-plus"></i> Adaugă';
+                this.classList.remove('btn-success');
+                this.classList.add('btn-primary');
+                qtyInput.value = 1;
+            }, 1000);
+        };
+    });
+}
+
+// Add product to order
+function addProductToOrder(product, quantity) {
+    // Check if product already exists
+    const existingIndex = selectedProducts.findIndex(p => p.product_id === product.id);
+
+    if (existingIndex !== -1) {
+        // Update quantity
+        selectedProducts[existingIndex].quantity += quantity;
+    } else {
+        // Add new product
+        selectedProducts.push({
+            product_id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: quantity
+        });
+    }
+
+    updateOrderSummary();
+}
+
+// Remove product from order
+function removeProductFromOrder(productId) {
+    selectedProducts = selectedProducts.filter(p => p.product_id !== productId);
+    updateOrderSummary();
+}
+
+// Update order summary display
+function updateOrderSummary() {
+    const itemsDiv = document.getElementById('selectedItems');
+    const totalDiv = document.getElementById('orderTotal');
+    const submitBtn = document.getElementById('submitBtn');
+    const productsDataInput = document.getElementById('productsData');
+
+    if (selectedProducts.length === 0) {
+        itemsDiv.innerHTML = '<p class="text-muted text-center" id="emptyOrder">Niciun produs selectat</p>';
+        totalDiv.textContent = '0 MDL';
+        submitBtn.disabled = true;
+        productsDataInput.value = '[]';
+        return;
+    }
+
+    itemsDiv.innerHTML = '';
+    let total = 0;
+    const template = document.getElementById('selectedItemTemplate');
+
+    selectedProducts.forEach(item => {
+        const clone = template.content.cloneNode(true);
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+
+        clone.querySelector('.item-name').textContent = item.name;
+        clone.querySelector('.item-quantity').textContent = item.quantity;
+        clone.querySelector('.item-price').textContent = item.price;
+        clone.querySelector('.item-total').textContent = itemTotal;
+
+        const removeBtn = clone.querySelector('.remove-item');
+        removeBtn.onclick = () => removeProductFromOrder(item.product_id);
+
+        itemsDiv.appendChild(clone);
+    });
+
+    totalDiv.textContent = `${total} MDL`;
+    submitBtn.disabled = false;
+
+    // Update hidden input with products data
+    productsDataInput.value = JSON.stringify(
+        selectedProducts.map(p => ({
+            product_id: p.product_id,
+            quantity: p.quantity
+        }))
+    );
+}
+
+// Form validation
+document.getElementById('createOrderForm').onsubmit = function(e) {
+    if (selectedProducts.length === 0) {
+        e.preventDefault();
+        alert('Selectați cel puțin un produs!');
+        return false;
+    }
+
+    // Show loading on button
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Se creează comanda...';
+};
+
+// Search on enter
+document.getElementById('productSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchProducts();
+    }
+});
+
+// Initial search on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-search if we have popular products
+    searchProducts();
+});
+</script>
+
+<style>
+.product-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.product-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.selected-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}

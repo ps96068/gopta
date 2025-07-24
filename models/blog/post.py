@@ -1,103 +1,62 @@
-from __future__ import annotations
-
-from datetime import datetime, timezone
-from sqlalchemy import String, Text, DateTime, Integer, ForeignKey, Index
-from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
-from sqlalchemy.sql import func
-
-
-
-from cfg import Base
-from models.base import CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
-
-
 # models/blog/post.py
+"""
+Post model pentru articolele blog.
+
+Postările sunt create de Staff (super_admin și manager) și servesc
+pentru a informa clienții despre noutăți, tutoriale, ghiduri etc.
+
+Business Rules:
+- Create/Edit/Unpublish: super_admin și manager
+- Delete: doar super_admin
+- Slug auto-generat din titlu
+- Notificări automate la publicare
+- Maxim 5 imagini per post
+- HTML sanitizat pentru conținut
+"""
+
+from __future__ import annotations
+from typing import Optional, List, TYPE_CHECKING
+
+
+from sqlalchemy import String, Integer, Text, ForeignKey, DateTime, Index, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+
+
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
+
+if TYPE_CHECKING:
+    from models import Staff, PostImage
+
+
 
 class Post(Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin):
+    """Model pentru articole blog."""
     __tablename__ = "posts"
-    __table_args__ = (
-        Index(
-            "idx_post_is_active_publish_date",
-            "is_active",
-            "publish_date"
-        ),
-    )
 
-    # ---------- Coloane ----------
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    title: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+
+    # Conținut
+    excerpt: Mapped[Optional[str]] = mapped_column(String(500))
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
-    author_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("staff.id"), nullable=False, index=True
-    )
-    publish_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-        index=True
-    )
-    modified_by: Mapped[int | None] = mapped_column(
-        Integer,
-        ForeignKey("staff.id"),
-        nullable=True
-    )
+    # Autor
+    author_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), nullable=False)
 
-    # ---------- Relații ----------
-    post_author: Mapped["Staff"] = relationship(
-        "Staff",
-        foreign_keys=[author_id],
-        back_populates="posts"
-    )
-    modifier: Mapped["Staff"] = relationship(
-        "Staff",
-        foreign_keys=[modified_by],
-    )
-    images: Mapped[list["PostImage"]] = relationship(
-        "PostImage",
-        back_populates="post",
-        cascade="all, delete-orphan"
-    )
-    edit_history: Mapped[list["PostEditHistory"]] = relationship(
-        "PostEditHistory",
-        back_populates="post",
-        cascade="all, delete-orphan"
-    )
-    interactions: Mapped[list["UserInteraction"]] = relationship(
-        "UserInteraction",
-        primaryjoin=(
-            "and_("
-            "Post.id==foreign(UserInteraction.target_id),"
-            "UserInteraction.target_type=='post'"
-            ")"
-        ),
-        back_populates="post",
-        overlaps="category,product,post,interactions"
-    )
+    # SEO
+    meta_title: Mapped[Optional[str]] = mapped_column(String(255))
+    meta_description: Mapped[Optional[str]] = mapped_column(String(500))
 
-    # ---------- Validatori ----------
-    @validates("title")
-    def validate_title(self, key, value: str) -> str:
-        if not value.strip():
-            raise ValueError("Titlul nu poate fi gol sau doar spații albe.")
-        return value
+    # Ordine și featured
+    is_featured: Mapped[bool] = mapped_column(default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
-    @validates("is_active")
-    def validate_is_active(self, key, value: bool) -> bool:
-        from datetime import datetime, timezone
-        if value and self.publish_date > datetime.now(timezone.utc):
-            raise ValueError(
-                "Postarea nu poate fi activă înainte de data de publicare."
-            )
-        return value
+    # Statistici
+    view_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    # ---------- Repr & Str ----------
-    def __repr__(self) -> str:
-        return (
-            f"<Post(id={self.id}, title='{self.title}', "
-            f"is_active={self.is_active}, publish_date={self.publish_date})>"
-        )
-
-    def __str__(self):
-        return f"Post: {self.id}_{self.title}"
+    # Relationships
+    author: Mapped["Staff"] = relationship()
+    images: Mapped[List["PostImage"]] = relationship(back_populates="post", cascade="all, delete-orphan")
 

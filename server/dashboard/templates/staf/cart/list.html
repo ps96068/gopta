@@ -1,0 +1,385 @@
+<!-- server/dashboard/templates/staff/cart/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+    <div class="btn-group">
+        <!-- NAVIGARE INTELIGENTĂ: Buton înapoi la client dacă se filtrează după client -->
+        {% if filtered_client and back_url %}
+        <a href="{{ back_url }}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-arrow-left"></i> {{ back_text }}
+        </a>
+        {% endif %}
+
+        {% if can_create(staff, 'cart') %}
+        <a href="{{ dashboard_prefix }}/cart/create" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-circle"></i> Coș Nou
+        </a>
+        {% endif %}
+        <a href="{{ dashboard_prefix }}/export?model=cart" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-download"></i> Export
+        </a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'cart_cleared' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Coș golit cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'cart_deleted' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Coș șters cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Info Banner pentru filtrare client -->
+{% if filtered_client %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-person-fill me-2"></i>
+    <strong>Filtrare activă:</strong> Afișez doar coșurile clientului
+    <strong>{{ filtered_client.first_name or 'Anonim' }} {{ filtered_client.last_name or '' }}</strong>
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-light ms-2">
+        <i class="bi bi-x"></i> Vezi toate coșurile
+    </a>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">
+                            {% if filtered_client %}
+                                Coșuri Client
+                            {% else %}
+                                Total Coșuri
+                            {% endif %}
+                        </h6>
+                        <h1 class="mb-0 text-primary">{{ total_carts }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-cart" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Coșuri Abandonate</h6>
+                        <h1 class="mb-0 text-warning">{{ abandoned_carts }}</h1>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-clock-history" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Mai vechi de 7 zile</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">
+                            {% if filtered_client %}
+                                Valoare Client
+                            {% else %}
+                                Valoare Totală
+                            {% endif %}
+                        </h6>
+                        <h1 class="mb-0 text-success">{{ total_value|int }}</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-currency-dollar" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        {% if filtered_client %}
+                            MDL în coșurile clientului
+                        {% else %}
+                            MDL în toate coșurile
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Filters -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <!-- Păstrează filtrul de client dacă există -->
+                    {% if client_filter %}
+                    <input type="hidden" name="client_id" value="{{ client_filter }}">
+                    {% endif %}
+
+                    <div class="col-md-4">
+                        <label class="form-label">Caută client</label>
+                        <input type="search" name="search" class="form-control"
+                               placeholder="Nume, email..."
+                               value="{{ search_query or '' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Vechime</label>
+                        <select name="days_old" class="form-select">
+                            <option value="">Toate</option>
+                            <option value="1" {% if days_old_filter == 1 %}selected{% endif %}>Mai vechi de 1 zi</option>
+                            <option value="7" {% if days_old_filter == 7 %}selected{% endif %}>Mai vechi de 7 zile</option>
+                            <option value="30" {% if days_old_filter == 30 %}selected{% endif %}>Mai vechi de 30 zile</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Caută
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <!-- Link reset care păstrează client_id dacă există -->
+                        <a href="{{ dashboard_prefix }}/cart{% if client_filter %}?client_id={{ client_filter }}{% endif %}" class="btn btn-light w-100">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetează
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carts List -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart text-primary me-2"></i>
+                    {% if filtered_client %}
+                        Coșuri {{ filtered_client.first_name or 'Client' }} {{ filtered_client.last_name or '' }}
+                    {% else %}
+                        Listă Coșuri
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="80">ID</th>
+                                <!-- Ascunde coloana Client dacă se filtrează după un client specific -->
+                                {% if not filtered_client %}
+                                <th>Client</th>
+                                {% endif %}
+                                <th width="120" class="text-center">Produse</th>
+                                <th width="120" class="text-center">Cantitate</th>
+                                <th width="150" class="text-end">Total</th>
+                                <th width="180">Ultima Actualizare</th>
+                                <th width="150">Creat</th>
+                                <th width="120" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cart in carts %}
+                            {% set totals = cart_totals[cart.id] %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">#{{ cart.id }}</small>
+                                </td>
+                                <!-- Afișează coloana Client doar dacă nu se filtrează după client -->
+                                {% if not filtered_client %}
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle bg-{{ cart.client.status.value|lower }} text-white me-2">
+                                            {{ (cart.client.first_name or 'A')[0] }}
+                                        </div>
+                                        <div>
+                                            <a href="{{ dashboard_prefix }}/client/{{ cart.client.id }}"
+                                               class="text-decoration-none">
+                                                {{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}
+                                            </a>
+                                            {% if cart.client.email %}
+                                            <br>
+                                            <small class="text-muted">{{ cart.client.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                {% endif %}
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ totals.items_count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">{{ totals.total_quantity }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ totals.total|int }} MDL</strong>
+                                </td>
+                                <td>
+                                    <small>{{ cart.updated_at|datetime_local }}</small>
+
+                                    {% set days_old = cart.updated_at|days_ago %}
+
+                                    {% if days_old > 7 %}
+                                    <br>
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> {{ days_old }} zile
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ cart.created_at|datetime_local }}</small>
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        {% if can_update(staff, 'cart') %}
+                                            <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}/edit"
+                                               class="btn btn-outline-warning" title="Editează">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+
+                                            <a href="{{ dashboard_prefix }}/cart/manage/{{ cart.id }}"
+                                               class="btn btn-outline-info" title="Gestionează produse">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                        {% endif %}
+
+                                        {% if can_create(staff, 'order') and totals.items_count > 0 %}
+                                        <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/convert-to-order"
+                                              style="display: inline;">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit" class="btn btn-outline-success btn-sm"
+                                                    title="Convertește în comandă"
+                                                    onclick="return confirm('Convertiți acest coș în comandă?');">
+                                                <i class="bi bi-cart-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        {% if can_delete(staff, 'cart') %}
+                                        <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/delete"
+                                              style="display: inline;">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    title="Șterge coș"
+                                                    onclick="return confirm('Sigur doriți să ștergeți acest coș?');">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="{% if filtered_client %}7{% else %}8{% endif %}" class="text-center py-4 text-muted">
+                                    <i class="bi bi-cart fs-1"></i>
+                                    <p class="mt-2">
+                                        {% if filtered_client %}
+                                            Acest client nu are coșuri active
+                                        {% else %}
+                                            Nu sunt coșuri active
+                                        {% endif %}
+                                    </p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if days_old_filter %}&days_old={{ days_old_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ p }}</span>
+                            </li>
+                            {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if days_old_filter %}&days_old={{ days_old_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">{{ p }}</a>
+                            </li>
+                            {% elif p == page - 3 or p == page + 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if days_old_filter %}&days_old={{ days_old_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}

@@ -1,0 +1,200 @@
+<!-- server/dashboard/templates/client/form.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/client" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-plus text-primary me-2"></i>
+                    {{ page_title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Alerts -->
+                {% if request.query_params.get('error') == 'telegram_id_exists' %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Acest Telegram ID există deja în sistem!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% elif request.query_params.get('error') %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Eroare la salvare. Verificați datele introduse.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post"
+                      id="clientForm"
+                      novalidate
+                      action="{{ dashboard_prefix }}/client/{% if client %}{{ client.id }}/edit{% else %}create{% endif %}">
+{{ csrf_input|safe }}
+                    <div class="row">
+                        <!-- Telegram Info -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-telegram"></i> Informații Telegram
+                            </h6>
+
+                            <div class="mb-3">
+                                <label class="form-label">Telegram ID <span class="text-danger">*</span></label>
+                                <input type="number" name="telegram_id" class="form-control"
+                                       value="{{ client.telegram_id if client else '' }}" required>
+                                <small class="form-text text-muted">ID unic Telegram</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">@</span>
+                                    <input type="text" name="username" class="form-control"
+                                           value="{{ client.username if client else '' }}"
+                                           placeholder="username">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Limbă</label>
+                                <select name="language_code" class="form-select">
+                                    <option value="ro" {% if client and client.language_code == 'ro' %}selected{% endif %}>
+                                        Română
+                                    </option>
+                                    <option value="ru" {% if client and client.language_code == 'ru' %}selected{% endif %}>
+                                        Русский
+                                    </option>
+                                    <option value="en" {% if client and client.language_code == 'en' %}selected{% endif %}>
+                                        English
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Personal Info -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-person"></i> Date Personale
+                            </h6>
+
+                            <div class="mb-3">
+                                <label class="form-label">Prenume</label>
+                                <input type="text" name="first_name" class="form-control"
+                                       value="{{ client.first_name if client else '' }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Nume</label>
+                                <input type="text" name="last_name" class="form-control"
+                                       value="{{ client.last_name if client else '' }}">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Status <span class="text-danger">*</span></label>
+                                <select name="status" class="form-select" id="statusSelect" required>
+                                    {% for value, label in user_statuses %}
+                                    <option value="{{ value }}"
+                                            {% if client and client.status.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Contact Info -->
+                        <div class="col-12">
+                            <hr class="my-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-envelope"></i> Date de Contact
+                            </h6>
+                        </div>
+
+<div class="col-md-6">
+    <div class="mb-3">
+        <label class="form-label">
+            Email
+            <span class="text-danger" id="emailRequired" style="display: none;">*</span>
+        </label>
+        <input type="text"
+               name="email"
+               class="form-control"
+               id="emailField"
+               value="{{ client.email if client else '' }}"
+               placeholder="email@exemplu.com">
+        <div class="invalid-feedback">
+            Vă rugăm introduceți o adresă de email validă.
+        </div>
+    </div>
+</div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Telefon
+                                    <span class="text-danger" id="phoneRequired" style="display: none;">*</span>
+                                </label>
+                                <input type="tel"
+                                       name="phone"
+                                       class="form-control"
+                                       id="phoneField"
+                                       value="{{ client.phone if client else '' }}"
+                                       placeholder="+373 XX XXX XXX">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ dashboard_prefix }}/client{% if client %}/{{ client.id }}{% endif %}"
+                           class="btn btn-light">
+                            <i class="bi bi-x-circle"></i> Anulează
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i>
+                            {% if client %}Actualizează{% else %}Creează{% endif %} Client
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if client %}
+        <!-- Danger Zone -->
+        <div class="card border-danger mt-4">
+            <div class="card-header bg-danger bg-opacity-10 border-danger">
+                <h5 class="mb-0 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Zonă Periculoasă
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Acțiunile de mai jos sunt ireversibile!</p>
+
+                <form method="post" action="{{ dashboard_prefix }}/client/{{ client.id }}/delete"
+                      onsubmit="return confirm('Sigur doriți să ștergeți acest client?');">
+                    {{ csrf_input|safe }}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Șterge Client
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,310 @@
+<!-- server/dashboard/templates/staf/cart/add_products.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Adaugă Produse în Coș Nou - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Adaugă Produse în Coș Nou{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Anulează
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Client Info at top -->
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Client:</strong> {{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}
+            {% if client.email %}({{ client.email }}){% endif %}
+            - <span class="badge bg-{{ client.status.value|lower }}">{{ client.status.value }}</span>
+            <br>
+            <small class="text-muted">Selectați cel puțin un produs pentru a crea coșul.</small>
+        </div>
+    </div>
+
+    <!-- Left: Product Selection -->
+    <div class="col-lg-8">
+        <!-- Filters -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" action="{{ url_for('dashboard_root') }}cart/add-products" class="row g-3">
+                    <input type="hidden" name="client_id" value="{{ client.id }}">
+                    <div class="col-md-5">
+                        <input type="search" name="search" class="form-control"
+                               placeholder="Caută produs..." value="{{ search_query or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="category_id" class="form-select">
+                            <option value="">Toate categoriile</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Filtrează
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    Selectați Produse
+                </h5>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                <div class="row g-3">
+                    {% for product in products %}
+                    <div class="col-md-6">
+                        <div class="card h-100 product-card">
+                            <div class="card-body">
+                                <h6 class="card-title mb-1">{{ product.name }}</h6>
+                                <p class="text-muted small mb-2">
+                                    SKU: {{ product.sku }} | {{ product.category.name }}
+                                </p>
+                                <div class="mb-3">
+                                    {% for price in product.prices %}
+                                        {% if price.price_type.value == client.status.value %}
+                                        <div class="h5 mb-0 text-success">
+                                            {{ price.amount|int }} MDL
+                                        </div>
+                                        <small class="text-muted">Preț {{ price.price_type.value }}</small>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" value="1" min="1" max="999"
+                                           class="form-control form-control-sm me-2 product-qty"
+                                           id="qty-{{ product.id }}"
+                                           style="width: 70px;">
+                                    <button class="btn btn-sm btn-primary flex-grow-1 add-product-btn"
+                                            data-product-id="{{ product.id }}"
+                                            data-product-name="{{ product.name }}"
+                                            data-product-price="{{ product.prices|selectattr('price_type.value', 'equalto', client.status.value)|map(attribute='amount')|first|int }}">
+                                        <i class="bi bi-cart-plus"></i> Adaugă
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Nu s-au găsit produse</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Selected Products -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-check text-success me-2"></i>
+                    Produse Selectate
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="selectedProducts" class="mb-3">
+                    <p class="text-muted text-center py-3" id="emptyMessage">
+                        Nu ați selectat niciun produs încă.
+                    </p>
+                </div>
+
+                <hr>
+
+                <!-- Total -->
+                <div class="d-flex justify-content-between mb-3">
+                    <h5>Total:</h5>
+                    <h5 class="text-success" id="cartTotal">0 MDL</h5>
+                </div>
+
+                <!-- Create Cart Button -->
+                <form id="createCartForm" method="post" action="{{ url_for('dashboard_root') }}cart/create-with-products" style="display: none;">
+                    {{ csrf_input|safe }}
+                    <input type="hidden" name="client_id" value="{{ client.id }}">
+                    <input type="hidden" name="products_data" id="productsData">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-cart-check"></i> Creează Coș cu Produse
+                    </button>
+                </form>
+
+                <div id="noProductsMessage" class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i>
+                    Selectați cel puțin un produs pentru a crea coșul.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.product-card:hover {
+    border-color: #e9ecef;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.product-card.added {
+    border-color: #28a745 !important;
+    background-color: #f8fff9;
+}
+
+.selected-item {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.selected-item .remove-btn {
+    cursor: pointer;
+    color: #dc3545;
+}
+
+.selected-item .remove-btn:hover {
+    color: #a02020;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedProducts = {};
+let total = 0;
+
+document.querySelectorAll('.add-product-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        const productName = this.dataset.productName;
+        const productPrice = parseFloat(this.dataset.productPrice);
+        const qtyInput = document.getElementById(`qty-${productId}`);
+        const quantity = parseInt(qtyInput.value);
+
+        // Add to selected products
+        if (selectedProducts[productId]) {
+            selectedProducts[productId].quantity += quantity;
+        } else {
+            selectedProducts[productId] = {
+                id: productId,
+                name: productName,
+                price: productPrice,
+                quantity: quantity
+            };
+        }
+
+        // Mark card as added
+        this.closest('.product-card').classList.add('added');
+
+        // Reset quantity
+        qtyInput.value = 1;
+
+        // Update display
+        updateSelectedProducts();
+
+        // Show success
+        showToast('success', `${productName} adăugat`);
+    });
+});
+
+function updateSelectedProducts() {
+    const container = document.getElementById('selectedProducts');
+    const emptyMessage = document.getElementById('emptyMessage');
+    const createForm = document.getElementById('createCartForm');
+    const noProductsMessage = document.getElementById('noProductsMessage');
+
+    if (Object.keys(selectedProducts).length === 0) {
+        emptyMessage.style.display = 'block';
+        container.innerHTML = '<p class="text-muted text-center py-3" id="emptyMessage">Nu ați selectat niciun produs încă.</p>';
+        createForm.style.display = 'none';
+        noProductsMessage.style.display = 'block';
+        total = 0;
+    } else {
+        let html = '';
+        total = 0;
+
+        for (const [productId, product] of Object.entries(selectedProducts)) {
+            const subtotal = product.price * product.quantity;
+            total += subtotal;
+
+            html += `
+                <div class="selected-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <strong>${product.name}</strong><br>
+                            <small>${product.quantity} x ${product.price} MDL = ${subtotal} MDL</small>
+                        </div>
+                        <i class="bi bi-x-circle remove-btn" onclick="removeProduct('${productId}')"></i>
+                    </div>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html;
+        createForm.style.display = 'block';
+        noProductsMessage.style.display = 'none';
+
+        // Update hidden input with products data
+        document.getElementById('productsData').value = JSON.stringify(Object.values(selectedProducts));
+    }
+
+    document.getElementById('cartTotal').textContent = `${total} MDL`;
+}
+
+function removeProduct(productId) {
+    delete selectedProducts[productId];
+
+    // Remove added class from card
+    document.querySelector(`[data-product-id="${productId}"]`)?.closest('.product-card').classList.remove('added');
+
+    updateSelectedProducts();
+    showToast('info', 'Produs eliminat');
+}
+
+function showToast(type, message) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'position-fixed bottom-0 end-0 p-3';
+        container.style.zIndex = '1050';
+        document.body.appendChild(container);
+    }
+
+    container.innerHTML = toastHtml;
+    const toast = new bootstrap.Toast(container.querySelector('.toast'));
+    toast.show();
+}
+</script>
+{% endblock %}

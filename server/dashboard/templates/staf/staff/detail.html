@@ -1,0 +1,196 @@
+<!-- server/dashboard/templates/staff/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ staff.first_name }} {{ staff.last_name }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}
+{{ staff.first_name }} {{ staff.last_name }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/staff" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    {% if is_super_admin and staff.id != current_staff.id %}
+    <a href="{{ dashboard_prefix }}/staff/{{ staff.id }}/edit" class="btn btn-sm btn-primary">
+        <i class="bi bi-pencil"></i> Editează
+    </a>
+    {% if staff.role.value == 'manager' %}
+    <a href="{{ dashboard_prefix }}/staff/{{ staff.id }}/permissions" class="btn btn-sm btn-warning">
+        <i class="bi bi-shield-lock"></i> Permisiuni
+    </a>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column - Staff Info -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge text-primary me-2"></i>
+                    Informații Staff
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-circle bg-{{ 'danger' if staff.role.value == 'super_admin' else 'warning' if staff.role.value == 'manager' else 'info' }} text-white mx-auto mb-3"
+                         style="width: 100px; height: 100px; font-size: 36px;">
+                        {{ staff.first_name[0] }}{{ staff.last_name[0] }}
+                    </div>
+                    <h5>{{ staff.first_name }} {{ staff.last_name }}</h5>
+                    <span class="badge bg-{{ 'danger' if staff.role.value == 'super_admin' else 'warning' if staff.role.value == 'manager' else 'info' }}">
+                        {{ staff.role.value.replace('_', ' ').title() }}
+                    </span>
+                    {% if staff.id == current_staff.id %}
+                    <span class="badge bg-primary ms-1">Tu</span>
+                    {% endif %}
+                </div>
+
+                <dl class="row">
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">
+                        <a href="mailto:{{ staff.email }}">{{ staff.email }}</a>
+                    </dd>
+
+                    {% if staff.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">
+                        <a href="tel:{{ staff.phone }}">{{ staff.phone }}</a>
+                    </dd>
+                    {% endif %}
+
+                    <dt class="col-5">Status:</dt>
+                    <dd class="col-7">
+                        {% if staff.is_active %}
+                        <span class="badge bg-success">Activ</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactiv</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-5">Creat la:</dt>
+                    <dd class="col-7">{{ staff.created_at|date_only }}</dd>
+
+                    {% if staff.last_login %}
+                    <dt class="col-5">Ultima logare:</dt>
+                    <dd class="col-7">{{ staff.last_login|datetime_local }}</dd>
+                    {% endif %}
+                </dl>
+
+                {% if staff.role.value == 'manager' %}
+                <hr>
+                <h6 class="text-muted mb-3">
+                    <i class="bi bi-shield-check"></i> Permisiuni Manager
+                </h6>
+                <ul class="list-unstyled">
+                    <li>
+                        <i class="bi bi-{{ 'check-circle text-success' if staff.can_manage_clients else 'x-circle text-danger' }}"></i>
+                        Gestionare Clienți
+                    </li>
+                    <li>
+                        <i class="bi bi-{{ 'check-circle text-success' if staff.can_manage_products else 'x-circle text-danger' }}"></i>
+                        Gestionare Produse
+                    </li>
+                    <li>
+                        <i class="bi bi-{{ 'check-circle text-success' if staff.can_manage_orders else 'x-circle text-danger' }}"></i>
+                        Gestionare Comenzi
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        {% if is_super_admin and staff.id != current_staff.id %}
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-charge text-warning me-2"></i>
+                    Acțiuni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-light" onclick="resetPassword({{ staff.id }})">
+                        <i class="bi bi-key text-info"></i> Resetează parolă
+                    </button>
+
+                    <form method="post" action="{{ dashboard_prefix }}/staff/{{ staff.id }}/toggle-active">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-light w-100">
+                            <i class="bi bi-{{ 'x-circle text-danger' if staff.is_active else 'check-circle text-success' }}"></i>
+                            {% if staff.is_active %}Dezactivează{% else %}Activează{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column - Activity -->
+    <div class="col-lg-8">
+        <!-- Recent Orders Processed -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-check text-success me-2"></i>
+                    Comenzi Procesate Recent
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center py-4">
+                    <i class="bi bi-cart fs-1"></i><br>
+                    Funcționalitate în dezvoltare
+                </p>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history text-info me-2"></i>
+                    Jurnal Activitate
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted text-center py-4">
+                    <i class="bi bi-journal-text fs-1"></i><br>
+                    Funcționalitate în dezvoltare
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function resetPassword(staffId) {
+    if (!await Dashboard.confirm('Sigur doriți să resetați parola pentru acest utilizator?')) {
+        return;
+    }
+
+    // TODO: Implement password reset
+    Dashboard.showToast('Funcționalitate în dezvoltare', 'info');
+}
+</script>
+{% endblock %}

@@ -1,3 +1,5 @@
+# cfg/loader.py
+
 import logging
 import os
 from pydantic import ValidationError
@@ -80,6 +82,7 @@ def cfg_db():
         logger.info('>>> Initializarea setarilor DB pentru BOT-ului inceput<<<')
         print('>>> Initializarea setarilor DB pentru BOT-ului inceput<<<')
         database_settings = DatabaseSettings(_env_file=env_db_path)
+        print("1 *********")
         db_settings_url = database_settings.db_url
 
         print(f"LOADER db_settings_url = {db_settings_url}")
@@ -89,7 +92,7 @@ def cfg_db():
     except (ValidationError, ValueError) as e:
         if isinstance(e, ValidationError):
             if e.errors()[0]['type'] != 'value_error':
-                print("*********")
+                print("except - *********")
                 for er in e.errors():
                     print(f"ValidationError in {er['loc'][0]} => {er['type']}")
                     logger.error("ValidationError in load_config.DatabaseSettings. %s => %s error", er['loc'][0], er['type'])

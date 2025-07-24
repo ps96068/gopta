@@ -1,0 +1,287 @@
+<!-- server/dashboard/templates/vend/product/detail.html -->
+{% extends "base_vendor.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>{{ product.name }}</h2>
+        <div class="text-muted">
+            SKU: {{ product.sku }} |
+            Categorie: {{ product.category.name }} |
+            Status:
+            {% if product.is_active %}
+                <span class="badge bg-success">Activ</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactiv</span>
+            {% endif %}
+            {% if product.in_stock %}
+                <span class="badge bg-success">În stoc</span>
+            {% else %}
+                <span class="badge bg-danger">Lipsă stoc</span>
+            {% endif %}
+        </div>
+    </div>
+    <div>
+        {% if can_update(user, 'product') %}
+            <a href="{{ dashboard_prefix }}/product/{{ product.id }}/edit" class="btn btn-primary">
+                <i class="bi bi-pencil me-2"></i>Editează
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Info -->
+    <div class="col-lg-8">
+        <!-- Images -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-images me-2"></i>Imagini Produs
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if product.images %}
+                    <div class="row g-3">
+                        {% for image in product.images %}
+                            <div class="col-md-3">
+                                <div class="position-relative">
+                                    <img src="/{{ image.image_path }}" alt="{{ image.alt_text or product.name }}"
+                                         class="img-fluid rounded shadow-sm">
+                                    {% if image.is_primary %}
+                                        <span class="position-absolute top-0 start-0 badge bg-primary m-2">
+                                            Principal
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ dashboard_prefix }}/product_image/product/{{ product.id }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-gear me-2"></i>Gestionează imagini
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-image fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">Nu există imagini încărcate</p>
+                        <a href="{{ dashboard_prefix }}/product_image/product/{{ product.id }}"
+                           class="btn btn-primary">
+                            <i class="bi bi-upload me-2"></i>Încarcă imagini
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-text-left me-2"></i>Descriere
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if product.short_description %}
+                    <h6 class="text-muted">Descriere scurtă</h6>
+                    <p>{{ product.short_description }}</p>
+                {% endif %}
+
+                {% if product.description %}
+                    <h6 class="text-muted">Descriere completă</h6>
+                    <div>{{ product.description|safe }}</div>
+                {% else %}
+                    <p class="text-muted">Nu există descriere pentru acest produs.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sales Stats -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Statistici Vânzări
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h3 class="text-primary mb-0">{{ total_orders }}</h3>
+                        <p class="text-muted">Total Comenzi</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="text-success mb-0">{{ total_quantity_sold }}</h3>
+                        <p class="text-muted">Cantitate Vândută</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="text-info mb-0">{{ "{:,.0f}".format(total_revenue) }} MDL</h3>
+                        <p class="text-muted">Venituri Totale</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Prices -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-currency-dollar me-2"></i>Prețuri
+                    </h5>
+                    <a href="{{ dashboard_prefix }}/product_price/product/{{ product.id }}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if prices_dict %}
+                    <table class="table table-sm mb-0">
+                        {% for price_type in price_types %}
+                            {% if price_type.value in prices_dict %}
+                                <tr>
+                                    <td class="text-muted">{{ price_type.value|title }}</td>
+                                    <td class="text-end">
+                                        <strong>{{ "{:,.0f}".format(prices_dict[price_type.value].amount) }} MDL</strong>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                {% else %}
+                    <p class="text-muted text-center mb-0">Prețuri nesetate</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning me-2"></i>Acțiuni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if can_update(user, 'product') %}
+                        <form method="post" action="{{ dashboard_prefix }}/product/{{ product.id }}/toggle-stock">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-outline-{{ 'danger' if product.in_stock else 'success' }} w-100">
+                                <i class="bi bi-box me-2"></i>
+                                {% if product.in_stock %}Marchează lipsă stoc{% else %}Marchează în stoc{% endif %}
+                            </button>
+                        </form>
+
+                        <form method="post" action="{{ dashboard_prefix }}/product/{{ product.id }}/toggle-active">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-outline-{{ 'warning' if product.is_active else 'success' }} w-100">
+                                <i class="bi bi-toggle-{{ 'on' if product.is_active else 'off' }} me-2"></i>
+                                {% if product.is_active %}Dezactivează{% else %}Activează{% endif %}
+                            </button>
+                        </form>
+
+                        <a href="{{ dashboard_prefix }}/product/{{ product.id }}/duplicate"
+                           class="btn btn-outline-primary">
+                            <i class="bi bi-copy me-2"></i>Duplică produs
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Meta Info -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Informații Meta
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt class="text-muted">URL Slug</dt>
+                    <dd class="mb-2"><code>{{ product.slug }}</code></dd>
+
+                    <dt class="text-muted">Ordine afișare</dt>
+                    <dd class="mb-2">{{ product.sort_order }}</dd>
+
+                    <dt class="text-muted">Creat la</dt>
+                    <dd class="mb-2">{{ product.created_at|datetime_local }}</dd>
+
+                    <dt class="text-muted">Ultima actualizare</dt>
+                    <dd class="mb-0">{{ product.updated_at|datetime_local }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Orders with this Product -->
+{% if product.order_items %}
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-cart-check me-2"></i>Comenzi Recente cu acest Produs
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Comandă</th>
+                        <th>Client</th>
+                        <th>Cantitate</th>
+                        <th>Preț Unitar</th>
+                        <th>Subtotal</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in product.order_items[:10] %}
+                        <tr>
+                            <td>
+                                <a href="{{ dashboard_prefix }}/order/{{ item.order_id }}"
+                                   class="text-decoration-none">
+                                    #{{ item.order.order_number }}
+                                </a>
+                            </td>
+                            <td>{{ item.order.client.first_name or 'Client' }} {{ item.order.client.last_name or '' }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ "{:,.0f}".format(item.unit_price) }} MDL</td>
+                            <td><strong>{{ "{:,.0f}".format(item.subtotal) }} MDL</strong></td>
+                            <td>{{ item.created_at|datetime_local }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if product.order_items|length > 10 %}
+            <div class="p-3 text-center">
+                <a href="{{ dashboard_prefix }}/order?product_id={{ product.id }}"
+                   class="btn btn-sm btn-outline-primary">
+                    Vezi toate comenzile ({{ product.order_items|length }})
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Confirm before toggle actions
+    document.querySelectorAll('form[action*="toggle"]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Sunteți sigur că doriți să efectuați această acțiune?')) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %}

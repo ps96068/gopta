@@ -1,0 +1,579 @@
+<!-- server/dashboard/templates/client/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Clienți - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Clienți{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    {% if can_create(staff, 'client') %}
+    <a href="{{ dashboard_prefix }}/client/create" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-circle"></i> Client Nou
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/import?model=client" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-upload"></i> Import
+    </a>
+    <a href="{{ dashboard_prefix }}/export?model=client" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Client nou creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'deleted' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Client șters cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'status_toggled' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Status client actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+
+
+{% block content %}
+<!-- Stats Cards Row -->
+<div class="row g-3 mb-4">
+    <!-- Total Clienți -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Clienți</h6>
+                        <h1 class="mb-0 text-primary">{{ stats.total }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anonim -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Anonim</h6>
+                        <h1 class="mb-0 text-secondary">{{ stats.anonim }}</h1>
+                    </div>
+                    <div class="text-secondary opacity-25">
+                        <i class="bi bi-person-dash" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-secondary"
+                             style="width: {{ (stats.anonim / stats.total * 100) if stats.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Înregistrați -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Înregistrați</h6>
+                        <h1 class="mb-0 text-success">{{ stats.user }}</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-person-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success"
+                             style="width: {{ (stats.user / stats.total * 100) if stats.total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pro -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Instalator + Pro</h6>
+                        <h1 class="mb-0 text-warning">{{ stats.instalator + stats.pro }}</h1>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-star" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-tools"></i> {{ stats.instalator }} instalatori •
+                        <i class="bi bi-award"></i> {{ stats.pro }} pro
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-4">
+    <!-- Left Column - Filters -->
+    <div class="col-lg-3">
+
+
+
+        <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <h5 class="mb-0">
+            <i class="bi bi-funnel text-primary me-2"></i>
+            Filtre
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" id="filterForm">
+            <!-- Toggle Inactivi - NOU -->
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="show_inactive"
+                           id="showInactive" value="true" {% if show_inactive %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <label class="form-check-label fw-bold" for="showInactive">
+                        <i class="bi bi-eye-slash text-warning me-1"></i>
+                        Arată clienți inactivi
+                    </label>
+                </div>
+                {% if show_inactive %}
+                    <small class="text-warning">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Sunt afișați și clienții dezactivați
+                    </small>
+                {% endif %}
+            </div>
+
+            <hr class="my-3">
+
+            <!-- Status -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Status</label>
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Toți clienții</option>
+                    {% for value, label in user_statuses %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Search -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Căutare</label>
+                <div class="input-group input-group-sm">
+                    <input type="search" name="search" class="form-control"
+                           placeholder="Nume, email, telefon..."
+                           value="{{ search_query or '' }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sort -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Sortare</label>
+                <select name="sort_by" class="form-select form-select-sm mb-2" onchange="this.form.submit()">
+                    <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>
+                        Data înregistrării
+                    </option>
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>
+                        Nume
+                    </option>
+                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>
+                        Status
+                    </option>
+                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="sort_desc"
+                           id="sortDesc" value="1" {% if sort_desc %}checked{% endif %}
+                           onchange="this.form.submit()">
+                    <label class="form-check-label" for="sortDesc">
+                        Descendent
+                    </label>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Reset -->
+            <div class="d-grid">
+                <a href="{{ dashboard_prefix }}/client" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-counterclockwise"></i> Resetează
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+        <!-- Quick Stats -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up text-success me-2"></i>
+                    Statistici Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">Înregistrări astăzi</small>
+                    <h4 class="mb-0">0</h4>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Media comenzi/client</small>
+                    <h4 class="mb-0">0.0</h4>
+                </div>
+                <div>
+                    <small class="text-muted d-block">Rata conversie</small>
+                    <h4 class="mb-0">0%</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Client List -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people text-primary me-2"></i>
+                        Listă Clienți
+                        {% if status_filter %}
+                        <span class="badge bg-secondary ms-2">{{ status_filter|title }}</span>
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">
+                        {{ (page - 1) * per_page + 1 }} - {{ [page * per_page, total]|min }} din {{ total }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+    <tr>
+        <th width="50">ID</th>
+        <th>Client</th>
+        <th>Contact</th>
+        <th width="120">Status Utilizator</th>
+        <th width="100" class="text-center">Status Client</th> <!-- NOU -->
+        <th width="100" class="text-center">Comenzi</th>
+        <th width="100" class="text-center">Cereri</th>
+        <th width="150">Înregistrat</th>
+        <th width="100">Acțiuni</th>
+    </tr>
+</thead>
+
+
+
+                        <tbody>
+
+
+                        {% for client in clients %}
+<tr class="{% if not client.is_active %}table-secondary{% endif %}">
+    <td>
+        <small class="text-muted">#{{ client.id }}</small>
+    </td>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="avatar-circle bg-{{ client.status.value|lower }} text-white me-3 {% if not client.is_active %}opacity-50{% endif %}">
+                {{ (client.first_name or 'A')[0] }}
+            </div>
+            <div>
+                <a href="{{ dashboard_prefix }}/client/{{ client.id }}"
+                   class="text-decoration-none text-dark fw-bold {% if not client.is_active %}text-muted{% endif %}">
+                    {{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}
+                    {% if not client.is_active %}
+                        <i class="bi bi-x-circle text-danger ms-1" title="Client inactiv"></i>
+                    {% endif %}
+                </a>
+                {% if client.username %}
+                <br>
+                <small class="text-muted">
+                    <i class="bi bi-telegram"></i> @{{ client.username }}
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </td>
+    <td>
+        {% if client.email %}
+            <small><i class="bi bi-envelope"></i> {{ client.email }}</small><br>
+        {% endif %}
+        {% if client.phone %}
+            <small><i class="bi bi-phone"></i> {{ client.phone }}</small>
+        {% endif %}
+        {% if not client.email and not client.phone %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        <span class="badge bg-{{ client.status.value|lower }} {% if not client.is_active %}opacity-50{% endif %}">
+            {{ client.status.value }}
+        </span>
+    </td>
+    <td class="text-center"> <!-- COLOANA NOUĂ -->
+        {% if client.is_active %}
+            <span class="badge bg-success">
+                <i class="bi bi-check-circle me-1"></i>Activ
+            </span>
+        {% else %}
+            <span class="badge bg-danger">
+                <i class="bi bi-x-circle me-1"></i>Inactiv
+            </span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        {% set orders = client_stats[client.id].orders %}
+        {% if orders > 0 %}
+            <span class="badge bg-success">{{ orders }}</span>
+        {% else %}
+            <span class="text-muted">0</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        {% set requests = client_stats[client.id].requests %}
+        {% if requests > 0 %}
+            <span class="badge bg-warning">{{ requests }}</span>
+        {% else %}
+            <span class="text-muted">0</span>
+        {% endif %}
+    </td>
+    <td>
+        <small>{{ client.created_at|datetime_local }}</small>
+    </td>
+    <td>
+        <div class="btn-group btn-group-sm">
+            <a href="{{ dashboard_prefix }}/client/{{ client.id }}"
+               class="btn btn-outline-primary" title="Vezi detalii">
+                <i class="bi bi-eye"></i>
+            </a>
+            {% if can_update(staff, 'client') %}
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                    data-bs-toggle="dropdown">
+                <span class="visually-hidden">Toggle</span>
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <h6 class="dropdown-header">Schimbă status utilizator</h6>
+                </li>
+                {% for value, label in user_statuses %}
+                {% if value != client.status.value %}
+                <li>
+                    <form method="post"
+                          action="{{ dashboard_prefix }}/client/{{ client.id }}/update-status"
+                          style="display: inline;">
+                        {{ csrf_input|safe }}
+                        <input type="hidden" name="new_status" value="{{ value }}">
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-arrow-right-circle"></i> {{ label }}
+                        </button>
+                    </form>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Separare pentru acțiuni de activare/dezactivare -->
+                {% if staff.role.value == 'super_admin' %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <h6 class="dropdown-header">Acțiuni Super Admin</h6>
+                </li>
+                <li>
+                    <form method="post" action="{{ dashboard_prefix }}/client/{{ client.id }}/toggle-active">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="dropdown-item text-danger"
+                                onclick="return confirm('Sigur doriți să {{ 'dezactivați' if client.is_active else 'activați' }} clientul?')">
+                            <i class="bi bi-{{ 'x-circle' if client.is_active else 'check-circle' }}"></i>
+                            {% if client.is_active %}Dezactivează Client{% else %}Activează Client{% endif %}
+                        </button>
+                    </form>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="9" class="text-center py-4 text-muted"> <!-- Actualizat colspan -->
+        <i class="bi bi-people fs-1"></i>
+        <p class="mt-2">Nu sunt clienți înregistrați</p>
+    </td>
+</tr>
+{% endfor %}
+
+
+
+                        </tbody>
+
+
+
+
+
+
+                    </table>
+                </div>
+            </div>
+
+
+
+            {% if total_pages > 1 %}
+<div class="card-footer bg-white">
+    <nav>
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page - 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if show_inactive %}&show_inactive=true{% endif %}{% if sort_by != 'created_at' %}&sort_by={{ sort_by }}{% endif %}{% if not sort_desc %}&sort_desc=0{% endif %}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ p }}</span>
+                </li>
+                {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if show_inactive %}&show_inactive=true{% endif %}{% if sort_by != 'created_at' %}&sort_by={{ sort_by }}{% endif %}{% if not sort_desc %}&sort_desc=0{% endif %}">{{ p }}</a>
+                </li>
+                {% elif p == page - 3 or p == page + 3 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page + 1 }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if show_inactive %}&show_inactive=true{% endif %}{% if sort_by != 'created_at' %}&sort_by={{ sort_by }}{% endif %}{% if not sort_desc %}&sort_desc=0{% endif %}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+
+
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.badge.bg-anonim {
+    background-color: #6c757d !important;
+}
+
+.badge.bg-user {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-instalator {
+    background-color: #ffc107 !important;
+}
+
+.badge.bg-pro {
+    background-color: #17a2b8 !important;
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Check pentru success/error messages
+const urlParams = new URLSearchParams(window.location.search);
+
+if (urlParams.get('success') === 'created') {
+    Dashboard.showToast('Client nou creat cu succes!', 'success');
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+if (urlParams.get('success') === 'status_updated') {
+    Dashboard.showToast('Status client actualizat cu succes!', 'success');
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+if (urlParams.get('error') === 'invalid_status') {
+    Dashboard.showToast('Status invalid!', 'danger');
+}
+
+if (urlParams.get('error') === 'update_failed') {
+    Dashboard.showToast('Eroare la actualizare status!', 'danger');
+}
+
+// Auto-refresh pentru cereri neprocesate
+{% if is_processed_filter == "false" %}
+setInterval(() => {
+    fetch('/dashboard/staff/home/api/notifications')
+        .then(r => r.json())
+        .then(data => {
+            if (data.new_requests > 0) {
+                Dashboard.showToast('Cereri noi disponibile!', 'info');
+            }
+        });
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}

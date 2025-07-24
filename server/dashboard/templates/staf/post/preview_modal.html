@@ -1,0 +1,115 @@
+<!-- server/dashboard/templates/staf/post/preview_modal.html -->
+
+<!-- Article Preview Content for Modal -->
+<div class="container-fluid">
+    <!-- Status badges -->
+    <div class="mb-3">
+        {% if not post.is_active %}
+        <span class="badge bg-secondary">
+            <i class="bi bi-eye-slash"></i> Draft - Nu este publicat
+        </span>
+        {% else %}
+        <span class="badge bg-success">
+            <i class="bi bi-check-circle"></i> Publicat
+        </span>
+        {% endif %}
+
+        {% if post.is_featured %}
+        <span class="badge bg-warning text-dark">
+            <i class="bi bi-star-fill"></i> Featured
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Article Content -->
+    <article class="blog-post">
+        <!-- Featured Image -->
+        {% if post.featured_image %}
+        <div class="mb-4">
+            <img src="/{{ post.featured_image.image_path }}"
+                 class="img-fluid rounded"
+                 alt="{{ post.featured_image.alt_text or post.title }}">
+            {% if post.featured_image.caption %}
+            <p class="text-muted small mt-2 text-center">
+                {{ post.featured_image.caption }}
+            </p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Title -->
+        <h1 class="mb-3">{{ post.title }}</h1>
+
+        <!-- Meta info -->
+        <div class="text-muted mb-4">
+            <i class="bi bi-person me-1"></i>{{ post.author.first_name }} {{ post.author.last_name }}
+            <span class="mx-2">•</span>
+            <i class="bi bi-calendar me-1"></i>{{ post.created_at|date_only }}
+            <span class="mx-2">•</span>
+            <i class="bi bi-eye me-1"></i>{{ post.view_count }} vizualizări
+        </div>
+
+        <!-- Excerpt -->
+        {% if post.excerpt %}
+        <div class="lead mb-4">
+            {{ post.excerpt }}
+        </div>
+        {% endif %}
+
+        <hr class="mb-4">
+
+        <!-- Content -->
+        <div class="post-content">
+            {{ post.content|safe }}
+        </div>
+    </article>
+
+    <!-- SEO Preview -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-google"></i> Preview SEO
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="google-preview">
+                <div class="url text-success">
+                    https://example.com/blog/{{ post.slug }}
+                </div>
+                <h3 class="title text-primary">
+                    {{ post.meta_title }}
+                </h3>
+                <div class="description text-muted">
+                    {{ post.meta_description }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-info-circle"></i> Informații Tehnice
+            </h5>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">ID:</dt>
+                <dd class="col-sm-9">{{ post.id }}</dd>
+
+                <dt class="col-sm-3">Slug:</dt>
+                <dd class="col-sm-9"><code>{{ post.slug }}</code></dd>
+
+                <dt class="col-sm-3">Creat:</dt>
+                <dd class="col-sm-9">{{ post.created_at|datetime_local }}</dd>
+
+                <dt class="col-sm-3">Modificat:</dt>
+                <dd class="col-sm-9">{{ post.updated_at|datetime_local }}</dd>
+
+                <dt class="col-sm-3">Imagini:</dt>
+                <dd class="col-sm-9">{{ post.images|length }} total</dd>
+            </dl>
+        </div>
+    </div>
+</div>

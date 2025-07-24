@@ -1,0 +1,14 @@
+Pentru Notification:
+
+NotificationCreate - suport scheduling
+NotificationBulkCreate - notificări personalizate în masă
+NotificationResponse - status și timp până la trimitere
+NotificationTemplate - template-uri reutilizabile
+NotificationQueueStatus - monitoring coadă
+NotificationStats - rate de succes și performanță
+
+Features importante:
+
+Notificări cu retry automat
+Bulk notifications cu personalizare
+Queue monitoring pentru notificări

@@ -1,0 +1,313 @@
+<!-- server/dashboard/templates/staf/post_image/gallery.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ url_for('post_list') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-file-text"></i> Articole
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="text-primary opacity-25 me-3">
+                                <i class="bi bi-images" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Total Imagini</h6>
+                                <h2 class="mb-0">{{ total_images }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <!-- Filters -->
+                        <form method="get" class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small">Autor</label>
+                                <select name="author_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="">Toți autorii</option>
+                                    {% for author in authors %}
+                                    <option value="{{ author.id }}" {% if author_id == author.id %}selected{% endif %}>
+                                        {{ author.first_name }} {{ author.last_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Caută articol</label>
+                                <input type="search" name="search" class="form-control form-control-sm"
+                                       placeholder="Titlu articol..." value="{{ search or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-search"></i> Caută
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="{{ url_for('post_images_gallery') }}" class="btn btn-light btn-sm w-100">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Posts Gallery -->
+<div class="row g-3">
+    {% for post in posts %}
+    {% set featured_image = post.images|selectattr("is_featured", "equalto", true)|first %}
+    {% set content_images = post.images|selectattr("is_featured", "equalto", false)|list %}
+    {% set has_default_only = featured_image and default_image in featured_image.image_path %}
+
+    <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card post-card border-0 shadow-sm h-100" data-post-id="{{ post.id }}">
+            <!-- Post Header -->
+            <div class="card-header bg-white border-0 p-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-0 text-truncate" title="{{ post.title }}">{{ post.title }}</h6>
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ post.author.first_name }} {{ post.author.last_name }}
+                        </small>
+                    </div>
+                    <span class="badge bg-{{ 'warning' if has_default_only else 'info' }} ms-1">
+                        {{ content_images|length }}/5
+                    </span>
+                </div>
+            </div>
+
+            <!-- Featured Image Display -->
+            <div class="card-body p-2">
+                <div class="image-display {% if has_default_only %}has-default{% endif %}">
+                    {% if featured_image %}
+                        <img src="/{{ featured_image.image_path }}"
+                             alt="{{ featured_image.alt_text or post.title }}"
+                             class="img-fluid">
+                    {% else %}
+                        <div class="no-image">
+                            <i class="bi bi-image"></i>
+                            <p class="small mt-2">Fără imagine</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Image Count Indicators -->
+                <div class="image-indicators mt-2">
+                    <span class="indicator featured {% if featured_image %}active{% endif %}"
+                          title="Imagine principală"></span>
+                    {% for i in range(5) %}
+                    <span class="indicator {% if i < content_images|length %}active{% endif %}"
+                          title="Imagine conținut {{ i + 1 }}"></span>
+                    {% endfor %}
+                </div>
+
+                <!-- Post Info -->
+                <div class="post-info mt-2">
+                    <small class="text-muted">
+                        {% if post.is_active %}
+                        <span class="badge bg-success bg-opacity-10 text-success">Publicat</span>
+                        {% else %}
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary">Draft</span>
+                        {% endif %}
+
+                        {% if post.is_featured %}
+                        <span class="badge bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-star-fill"></i> Featured
+                        </span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Post Footer -->
+            <div class="card-footer bg-white border-0 p-2">
+                <div class="d-grid gap-1">
+                    <a href="{{ url_for('post_images_list', post_id=post.id) }}"
+                       class="btn btn-sm btn-primary">
+                        <i class="bi bi-images"></i>
+                        Gestionează imagini
+                    </a>
+                    <a href="{{ url_for('post_edit_form', post_id=post.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                        Editează articol
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-file-text fs-1"></i>
+            <p class="mt-2">Nu sunt articole {% if search or author_id %}care să corespundă criteriilor{% endif %}</p>
+            {% if search or author_id %}
+            <a href="{{ url_for('post_images_gallery') }}" class="btn btn-link">Resetează filtrele</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page - 1 }}{% if author_id %}&author_id={{ author_id }}{% endif %}{% if search %}&search={{ search }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active">
+                <span class="page-link">{{ p }}</span>
+            </li>
+            {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ p }}{% if author_id %}&author_id={{ author_id }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ p }}</a>
+            </li>
+            {% elif p == 4 and page > 6 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% elif p == total_pages - 3 and page < total_pages - 5 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page + 1 }}{% if author_id %}&author_id={{ author_id }}{% endif %}{% if search %}&search={{ search }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.post-card {
+    transition: transform 0.2s;
+}
+
+.post-card:hover {
+    transform: translateY(-2px);
+}
+
+.image-display {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.image-display img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-display.has-default {
+    opacity: 0.7;
+}
+
+.no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #dee2e6;
+    font-size: 2rem;
+}
+
+.image-indicators {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #dee2e6;
+    position: relative;
+}
+
+.indicator.active {
+    background: #0d6efd;
+}
+
+.indicator.featured {
+    width: 12px;
+    height: 12px;
+    background: #ffc107;
+}
+
+.indicator.featured.active {
+    background: #ffc107;
+}
+
+.card-header h6 {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.post-info {
+    min-height: 24px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Quick stats update
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate real images (excluding default)
+    const cards = document.querySelectorAll('.post-card');
+    let realImages = 0;
+
+    cards.forEach(card => {
+        const hasDefault = card.querySelector('.has-default');
+        if (!hasDefault) {
+            const activeIndicators = card.querySelectorAll('.indicator.active');
+            realImages += activeIndicators.length;
+        }
+    });
+
+    // Update total if needed
+    const totalElement = document.querySelector('h2');
+    if (totalElement && realImages !== parseInt(totalElement.textContent)) {
+        totalElement.textContent = realImages;
+    }
+});
+</script>
+{% endblock %}

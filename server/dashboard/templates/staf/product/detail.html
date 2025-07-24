@@ -1,0 +1,343 @@
+<!-- server/dashboard/templates/product/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ product.name }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/product" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    {% if can_update(staff, 'product') %}
+    <a href="{{ dashboard_prefix }}/product/{{ product.id }}/edit" class="btn btn-sm btn-primary">
+        <i class="bi bi-pencil"></i> Editează
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/product_image?product_id={{ product.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-images"></i> Imagini
+    </a>
+    <a href="{{ dashboard_prefix }}/product_price?product_id={{ product.id }}" class="btn btn-sm btn-warning">
+        <i class="bi bi-currency-dollar"></i> Prețuri
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Produs creat cu succes! Acum puteți adăuga imagini și prețuri.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Produs actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <!-- Status -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Status Produs</h6>
+                        <h3 class="mb-0">
+                            {% if product.is_active %}
+                            <span class="badge bg-success fs-5">Activ</span>
+                           {% else %}
+                           <span class="badge bg-danger fs-5">Inactiv</span>
+                           {% endif %}
+                       </h3>
+                   </div>
+                   <div class="opacity-25">
+                       <i class="bi bi-{{ 'check-circle text-success' if product.is_active else 'x-circle text-danger' }}"
+                          style="font-size: 2.5rem;"></i>
+                   </div>
+               </div>
+               <div class="mt-3 pt-3 border-top">
+                   <small class="text-muted">SKU:</small>
+                   <br>
+                   <strong><code>{{ product.sku }}</code></strong>
+               </div>
+           </div>
+       </div>
+   </div>
+
+   <!-- Imagini -->
+   <div class="col-12 col-md-4">
+       <div class="card border-0 shadow-sm h-100">
+           <div class="card-body">
+               <div class="d-flex justify-content-between align-items-start">
+                   <div>
+                       <h6 class="text-muted mb-1">Imagini Produs</h6>
+                       <h1 class="mb-0 text-info">{{ product.images|length }}</h1>
+                   </div>
+                   <div class="text-info opacity-25">
+                       <i class="bi bi-images" style="font-size: 2.5rem;"></i>
+                   </div>
+               </div>
+               <div class="mt-3 pt-3 border-top">
+                   <small class="text-muted">Imagine principală:</small>
+                   <br>
+                   <strong>{% if primary_image %}Da{% else %}Nu{% endif %}</strong>
+               </div>
+           </div>
+       </div>
+   </div>
+
+   <!-- Vânzări -->
+   <div class="col-12 col-md-4">
+       <div class="card border-0 shadow-sm h-100">
+           <div class="card-body">
+               <div class="d-flex justify-content-between align-items-start">
+                   <div>
+                       <h6 class="text-muted mb-1">Total Vândut</h6>
+                       <h1 class="mb-0 text-success">{{ total_quantity_sold }}</h1>
+                   </div>
+                   <div class="text-success opacity-25">
+                       <i class="bi bi-cart-check" style="font-size: 2.5rem;"></i>
+                   </div>
+               </div>
+               <div class="mt-3 pt-3 border-top">
+                   <small class="text-muted">În comenzi:</small>
+                   <br>
+                   <strong>{{ total_orders }}</strong>
+               </div>
+           </div>
+       </div>
+   </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+   <!-- Left Column - Product Info -->
+   <div class="col-lg-4">
+       <!-- Product Image -->
+       <div class="card border-0 shadow-sm mb-3">
+           <div class="card-header bg-white border-0">
+               <h5 class="mb-0">
+                   <i class="bi bi-image text-primary me-2"></i>
+                   Imagine Principală
+               </h5>
+           </div>
+           <div class="card-body text-center">
+               {% if primary_image %}
+               <img src="/{{ primary_image.image_path }}"
+                    alt="{{ product.name }}"
+                    class="img-fluid rounded shadow-sm"
+                    style="max-height: 300px; object-fit: cover;">
+               {% else %}
+               <img src="/static/webapp/img/product/prod_default.png"
+                    alt="No image"
+                    class="img-fluid rounded shadow-sm"
+                    style="max-height: 300px; object-fit: cover;">
+               {% endif %}
+
+               <div class="mt-3">
+<!--                   <a href="{{ url_for('dashboard_root') }}product_image?product_id={{ product.id }}"-->
+                   <a href="{{ dashboard_prefix }}/product_image/product/{{ product.id }}"
+                      class="btn btn-light btn-sm">
+                       <i class="bi bi-images"></i> Gestionează Imagini ({{ product.images|length }})
+                   </a>
+               </div>
+           </div>
+       </div>
+
+       <!-- Product Details -->
+       <div class="card border-0 shadow-sm">
+           <div class="card-header bg-white border-0">
+               <h5 class="mb-0">
+                   <i class="bi bi-info-circle text-primary me-2"></i>
+                   Detalii Produs
+               </h5>
+           </div>
+           <div class="card-body">
+               <dl class="row mb-0">
+                   <dt class="col-5">Categorie:</dt>
+                   <dd class="col-7">
+                       <a href="{{ dashboard_prefix }}/category/{{ product.category.id }}">
+                           {{ product.category.name }}
+                       </a>
+                   </dd>
+
+                   <dt class="col-5">Furnizor:</dt>
+                   <dd class="col-7">{{ product.vendor_company.name }}</dd>
+
+                   <dt class="col-5">Slug:</dt>
+                   <dd class="col-7"><code>{{ product.slug }}</code></dd>
+
+                   <dt class="col-5">Ordine:</dt>
+                   <dd class="col-7">{{ product.sort_order }}</dd>
+
+                   <dt class="col-5">Creat la:</dt>
+                   <dd class="col-7">{{ product.created_at|date_only }}</dd>
+
+                   <dt class="col-5">Actualizat:</dt>
+                   <dd class="col-7">{{ product.updated_at|datetime_local }}</dd>
+               </dl>
+           </div>
+       </div>
+   </div>
+
+   <!-- Right Column - Prices & Description -->
+   <div class="col-lg-8">
+       <!-- Prices -->
+       <div class="card border-0 shadow-sm mb-3">
+           <div class="card-header bg-white border-0">
+               <div class="d-flex justify-content-between align-items-center">
+                   <h5 class="mb-0">
+                       <i class="bi bi-currency-dollar text-warning me-2"></i>
+                       Prețuri (MDL)
+                   </h5>
+                   <a href="{{ dashboard_prefix }}/product_price?product_id={{ product.id }}"
+                      class="btn btn-sm btn-warning">
+                       <i class="bi bi-pencil"></i> Editează Prețuri
+                   </a>
+               </div>
+           </div>
+           <div class="card-body">
+               <div class="table-responsive">
+                   <table class="table mb-0">
+                       <thead>
+                           <tr>
+                               <th>Tip Client</th>
+                               <th class="text-end">Preț</th>
+                               <th class="text-center">Status</th>
+                               <th width="150">Ultima Actualizare</th>
+                           </tr>
+                       </thead>
+                       <tbody>
+                           {% for price_type in price_types %}
+                           {% set price = prices_dict.get(price_type.value) %}
+                           <tr>
+                               <td>
+                                   <strong>{{ price_type.value|title }}</strong>
+                               </td>
+                               <td class="text-end">
+                                   {% if price %}
+                                   <h5 class="mb-0">{{ price.amount|int }} MDL</h5>
+                                   {% else %}
+                                   <span class="text-muted">Nu este setat</span>
+                                   {% endif %}
+                               </td>
+                               <td class="text-center">
+                                   {% if price and price.amount > 0 %}
+                                   <span class="badge bg-success">Activ</span>
+                                   {% else %}
+                                   <span class="badge bg-warning">Nesetat</span>
+                                   {% endif %}
+                               </td>
+                               <td>
+                                   {% if price %}
+                                   <small>{{ price.updated_at|datetime_local }}</small>
+                                   {% else %}
+                                   -
+                                   {% endif %}
+                               </td>
+                           </tr>
+                           {% endfor %}
+                       </tbody>
+                   </table>
+               </div>
+           </div>
+       </div>
+
+       <!-- Description -->
+       <div class="card border-0 shadow-sm mb-3">
+           <div class="card-header bg-white border-0">
+               <h5 class="mb-0">
+                   <i class="bi bi-text-paragraph text-info me-2"></i>
+                   Descriere
+               </h5>
+           </div>
+           <div class="card-body">
+               {% if product.short_description %}
+               <h6 class="text-muted">Descriere Scurtă</h6>
+               <p>{{ product.short_description }}</p>
+               <hr>
+               {% endif %}
+
+               {% if product.description %}
+               <h6 class="text-muted">Descriere Completă</h6>
+               <div>{{ product.description|safe }}</div>
+               {% else %}
+               <p class="text-muted text-center py-3">
+                   <i class="bi bi-text-paragraph"></i> Nu există descriere
+               </p>
+               {% endif %}
+           </div>
+       </div>
+
+       <!-- SEO -->
+       {% if product.meta_title or product.meta_description %}
+       <div class="card border-0 shadow-sm">
+           <div class="card-header bg-white border-0">
+               <h5 class="mb-0">
+                   <i class="bi bi-search text-primary me-2"></i>
+                   SEO
+               </h5>
+           </div>
+           <div class="card-body">
+               {% if product.meta_title %}
+               <h6 class="text-muted">Meta Title</h6>
+               <p>{{ product.meta_title }}</p>
+               {% endif %}
+
+               {% if product.meta_description %}
+               <h6 class="text-muted">Meta Description</h6>
+               <p>{{ product.meta_description }}</p>
+               {% endif %}
+           </div>
+       </div>
+       {% endif %}
+   </div>
+</div>
+
+<!-- All Images Gallery -->
+{% if product.images|length > 1 %}
+<div class="card border-0 shadow-sm mt-4">
+   <div class="card-header bg-white border-0">
+       <h5 class="mb-0">
+           <i class="bi bi-images text-info me-2"></i>
+           Galerie Imagini ({{ product.images|length }})
+       </h5>
+   </div>
+   <div class="card-body">
+       <div class="row g-3">
+           {% for image in product.images %}
+           <div class="col-6 col-md-3">
+               <div class="position-relative">
+                   <img src="/{{ image.image_path }}"
+                        alt="{{ image.alt_text or product.name }}"
+                        class="img-fluid rounded shadow-sm">
+                   {% if image.is_primary %}
+                   <span class="badge bg-primary position-absolute top-0 start-0 m-2">
+                       Principal
+                   </span>
+                   {% endif %}
+               </div>
+           </div>
+           {% endfor %}
+       </div>
+   </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.badge.fs-5 {
+   font-size: 1.25rem !important;
+}
+</style>
+{% endblock %}

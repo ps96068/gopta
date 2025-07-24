@@ -1,0 +1,625 @@
+<!-- templates/staf/home/index.html -->
+{% extends "base_staff.html" %}
+
+{% block content %}
+<!-- Row 1: 4 Stats Cards -->
+<div class="row g-3 mb-4">
+    <!-- Utilizatori Card -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Utilizatori</h6>
+                        <h2 class="mb-0 text-primary" id="totalUsers">{{ stats.total_users }}</h2>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="row g-2 text-center">
+                        <div class="col-3">
+                            <div>
+                                <small class="text-muted d-block">Anonim</small>
+                                <strong>{{ stats.user_distribution.anonim }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div>
+                                <small class="text-muted d-block">User</small>
+                                <strong>{{ stats.user_distribution.user }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div>
+                                <small class="text-muted d-block">Instalator</small>
+                                <strong>{{ stats.user_distribution.instalator }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div>
+                                <small class="text-muted d-block">Pro</small>
+                                <strong>{{ stats.user_distribution.pro }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Coșuri Card -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Coșuri</h6>
+                        <h2 class="mb-0 text-info" id="totalCarts">{{ stats.total_carts }}</h2>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-cart3" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Active (ultimele 24h)</small>
+                        <strong class="text-success" id="activeCarts">{{ stats.active_carts }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Cu oferte generate</small>
+                        <strong class="text-primary" id="cartsWithQuotes">{{ stats.carts_with_quotes }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Abandonate (>24h)</small>
+                        <strong class="text-warning" id="abandonedCarts">{{ stats.abandoned_carts }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Comenzi Card -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Comenzi</h6>
+                        <h2 class="mb-0 text-success" id="totalOrders">{{ stats.total_orders }}</h2>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-cart-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="flex-grow-1">
+                            <small class="text-muted">Comenzi noi</small>
+                        </div>
+                        <div>
+                            <strong class="text-warning" id="newOrders">{{ stats.new_orders }}</strong>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: {{ (stats.new_orders / stats.total_orders * 100) if stats.total_orders > 0 else 0 }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                        <small class="text-muted">Completate luna asta</small>
+                        <strong>{{ stats.completed_orders_month }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produse Card -->
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Produse</h6>
+                        <h2 class="mb-0 text-warning" id="activeProducts">{{ stats.active_products }}</h2>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-box-seam" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Active</small>
+                        <strong class="text-success">{{ stats.active_products }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Inactive</small>
+                        <strong class="text-danger" id="inactiveProducts">{{ stats.inactive_products }}</strong>
+                    </div>
+                    {% if stats.pending_requests > 0 %}
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-danger">Cereri în așteptare</small>
+                        <span class="badge bg-danger rounded-pill">{{ stats.pending_requests }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Quick Actions (Horizontal) -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-auto">
+                <h6 class="mb-0 text-muted">
+                    <i class="bi bi-lightning-charge text-warning"></i> Acțiuni Rapide:
+                </h6>
+            </div>
+            <div class="col">
+                <div class="d-flex flex-wrap gap-2">
+                    <!-- Produs Nou -->
+                    <a href="{{ dashboard_prefix }}/product/create"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        Produs Nou
+                    </a>
+
+                    <!-- Categorie Nouă -->
+                    <a href="{{ dashboard_prefix }}/category/create"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-tags me-1"></i>
+                        Categorie Nouă
+                    </a>
+
+                    <!-- Vezi Coșuri Active -->
+                    <a href="{{ dashboard_prefix }}/carts/active"
+                       class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-cart3 me-1"></i>
+                        Coșuri Active
+                        {% if stats.active_carts > 0 %}
+                        <span class="badge bg-info ms-1">{{ stats.active_carts }}</span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Generează Ofertă -->
+                    <a href="{{ dashboard_prefix }}/quotes/generate"
+                       class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Generează Ofertă
+                    </a>
+
+                    <!-- Import Date -->
+                    <a href="{{ dashboard_prefix }}/import"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-cloud-upload me-1"></i>
+                        Import
+                    </a>
+
+                    <!-- Export -->
+                    <a href="{{ dashboard_prefix }}/export"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download me-1"></i>
+                        Export
+                    </a>
+
+                    <!-- Separator vertical pentru link-uri secundare -->
+                    <div class="vr mx-2"></div>
+
+                    <!-- Statistici -->
+                    <a href="{{ dashboard_prefix }}/stats"
+                       class="btn btn-link btn-sm text-decoration-none">
+                        <i class="bi bi-graph-up me-1"></i>
+                        Statistici
+                    </a>
+
+                    <!-- Rapoarte -->
+                    <a href="{{ dashboard_prefix }}/reports"
+                       class="btn btn-link btn-sm text-decoration-none">
+                        <i class="bi bi-file-text me-1"></i>
+                        Rapoarte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Activity Lists -->
+<div class="row g-4">
+    <!-- Cereri Column -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope text-warning me-2"></i>
+                        Cereri
+                        {% if stats.pending_requests > 0 %}
+                        <span class="badge bg-danger ms-2" id="requestsColumnBadge">{{ stats.pending_requests }}</span>
+                        {% endif %}
+                    </h5>
+                    <a href="{{ dashboard_prefix }}/user_request" class="btn btn-sm btn-light">
+                        Vezi toate
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="activity-list" id="requestsActivityList">
+                    {% for activity in recent_activity if activity.type == 'request' %}
+                    <div class="activity-item d-flex align-items-start p-3">
+                        <div class="activity-dot-wrapper">
+                            <div class="activity-dot bg-warning"></div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-dark">{{ activity.title }}</h6>
+                                    <p class="text-muted small mb-1">{{ activity.description }}</p>
+                                    <small class="text-muted">{{ activity.timestamp|time_only }}</small>
+                                </div>
+                                <a href="{{ activity.link }}" class="btn btn-sm btn-outline-warning ms-2">
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-envelope fs-2"></i>
+                        <p class="mt-2 mb-0">Nu sunt cereri noi</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coșuri Column -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart3 text-info me-2"></i>
+                        Coșuri Active
+                        {% if stats.active_carts > 0 %}
+                        <span class="badge bg-info ms-2" id="cartsColumnBadge"
+                            {% if stats.active_carts == 0 %}style="display: none;"{% endif %}>
+                            {{ stats.active_carts }}
+                        </span>
+                        {% endif %}
+                    </h5>
+                    <a href="{{ dashboard_prefix }}/carts" class="btn btn-sm btn-light">
+                        Vezi toate
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="activity-list" id="cartActivityList">
+                    {% for cart in recent_carts %}
+                    <div class="activity-item d-flex align-items-start p-3">
+                        <div class="activity-dot-wrapper">
+                            <div class="activity-dot bg-info"></div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-dark">
+                                        {{ cart.client_name }}
+                                        {% if cart.has_quote %}
+                                        <span class="badge bg-success ms-1">Cu ofertă</span>
+                                        {% endif %}
+                                    </h6>
+                                    <p class="text-muted small mb-1">
+                                        {{ cart.items_count }} produse • {{ cart.total_amount }} MDL
+                                    </p>
+                                    <small class="text-muted">{{ cart.updated_at|time_only }}</small>
+                                </div>
+                                <div class="btn-group btn-group-sm ms-2">
+                                    <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}"
+                                       class="btn btn-outline-info" title="Vezi coș">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if not cart.has_quote %}
+                                    <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}/generate-quote"
+                                       class="btn btn-outline-warning" title="Generează ofertă">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-cart3 fs-2"></i>
+                        <p class="mt-2 mb-0">Nu sunt coșuri active</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comenzi Column -->
+
+    <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-check text-primary me-2"></i>
+                    Comenzi noi
+                    {% if stats.new_orders > 0 %}
+                    <span class="badge bg-danger ms-2" id="ordersColumnBadge">{{ stats.new_orders }}</span>
+                    {% endif %}
+                </h5>
+                <a href="{{ dashboard_prefix }}/orders" class="btn btn-sm btn-light">
+                    Vezi toate
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="activity-list" id="ordersActivityList">
+                {% for activity in recent_activity if activity.type == 'order' %}
+                <div class="activity-item d-flex align-items-start p-3">
+                    <div class="activity-dot-wrapper">
+                        <div class="activity-dot bg-primary"></div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 text-dark">{{ activity.title }}</h6>
+                                <p class="text-muted small mb-1">{{ activity.description }}</p>
+                                <small class="text-muted">{{ activity.timestamp|time_only }}</small>
+                            </div>
+                            <a href="{{ activity.link }}" class="btn btn-sm btn-outline-primary ms-2">
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-cart fs-2"></i>
+                    <p class="mt-2 mb-0">Nu sunt comenzi noi</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<footer class="text-center text-muted py-4 mt-4">
+    <small>
+        <i class="bi bi-clock me-1"></i> Ultima actualizare: {{ stats.last_updated|datetime_local }} |
+        <i class="bi bi-people me-1"></i> <span id="onlineUsers">0</span> utilizatori online |
+        <i class="bi bi-graph-up me-1"></i> Conversie coșuri: <strong id="conversionRate">{{ "%.1f"|format(stats.cart_conversion_rate) }}%</strong> |
+        PCE Dashboard v1.0.0
+    </small>
+</footer>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Activity Lists */
+.activity-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    border-bottom: 1px solid #f0f2f5;
+    transition: background-color 0.2s;
+}
+
+.activity-item:hover {
+    background-color: #f8f9fa;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-dot-wrapper {
+    position: relative;
+    padding-top: 3px;
+}
+
+.activity-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Quick Actions Bar */
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Smooth scrollbar */
+.activity-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+/* Badge pulse animation */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
+.badge.bg-danger {
+    animation: pulse 2s infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .activity-list {
+        max-height: 300px;
+    }
+
+    /* Stack quick actions on mobile */
+    .d-flex.flex-wrap.gap-2 {
+        justify-content: center;
+    }
+}
+
+/* Vertical divider */
+.vr {
+    display: inline-block;
+    align-self: stretch;
+    width: 1px;
+    min-height: 1em;
+    background-color: currentColor;
+    opacity: 0.25;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update online users
+async function updateStats() {
+    try {
+        const response = await fetch('/dashboard/staff/home/api/quick-stats');
+        const data = await response.json();
+        document.getElementById('onlineUsers').textContent = data.users_online || 0;
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+updateStats();
+setInterval(updateStats, 30000);
+
+// Real-time updates pentru badges
+let lastRequestCount = {{ stats.pending_requests }};
+let lastOrderCount = {{ stats.new_orders }};
+let lastCartCount = {{ stats.active_carts }};
+
+async function checkForNewItems() {
+    try {
+        const response = await fetch('/dashboard/staff/home/api/notifications');
+        const data = await response.json();
+
+        // Update badges dacă s-au schimbat valorile
+        if (data.new_requests !== lastRequestCount) {
+            lastRequestCount = data.new_requests;
+            // Optionally refresh requests list
+        }
+
+        if (data.new_orders !== lastOrderCount) {
+            lastOrderCount = data.new_orders;
+            // Optionally refresh orders list
+        }
+
+        if (data.active_carts !== lastCartCount) {
+            lastCartCount = data.active_carts;
+            // Optionally refresh carts list
+        }
+    } catch (error) {
+        console.error('Error checking for new items:', error);
+    }
+}
+
+// Check every 30 seconds
+setInterval(checkForNewItems, 30000);
+
+
+// Helper function pentru update badges (adaugă dacă nu există)
+function updateBadge(id, value) {
+    const badge = document.getElementById(id);
+    if (badge) {
+        if (value > 0) {
+            badge.textContent = value;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+
+// Refresh stats every 10 seconds
+async function refreshDashboardStats() {
+    try {
+        const response = await fetch('/dashboard/staff/home/api/dashboard-stats');
+        const data = await response.json();
+
+        // Update cards values
+        document.getElementById('totalUsers').textContent = data.total_users;
+        document.getElementById('totalCarts').textContent = data.total_carts;
+        document.getElementById('activeCarts').textContent = data.active_carts;
+        document.getElementById('totalOrders').textContent = data.total_orders;
+        document.getElementById('newOrders').textContent = data.new_orders;
+
+        // Update progress bar pentru comenzi noi
+        const progressBar = document.querySelector('.progress-bar.bg-warning');
+        if (progressBar && data.total_orders > 0) {
+            const percentage = (data.new_orders / data.total_orders * 100);
+            progressBar.style.width = percentage + '%';
+        }
+
+        // Update other stats
+        document.getElementById('activeProducts').textContent = data.active_products;
+        document.getElementById('inactiveProducts').textContent = data.inactive_products;
+
+        // Update cart stats
+        document.getElementById('cartsWithQuotes').textContent = data.carts_with_quotes;
+        document.getElementById('abandonedCarts').textContent = data.abandoned_carts;
+
+        // Update footer conversion rate
+        const conversionRate = document.getElementById('conversionRate');
+        if (conversionRate) {
+            conversionRate.textContent = data.cart_conversion_rate.toFixed(1) + '%';
+        }
+
+
+        // Actualizam badge-ul "Cereri"
+        updateBadge('requestsColumnBadge', data.pending_requests);
+
+        // Actualizam badge-ul "Coșuri Active"
+        updateBadge('cartsColumnBadge', data.active_carts);
+
+        // Actualizam badge-ul "Comenzi"
+        updateBadge('ordersColumnBadge', data.new_orders);
+
+
+
+
+    } catch (error) {
+        console.error('Error refreshing stats:', error);
+    }
+}
+
+// Refresh stats every 10 seconds
+setInterval(refreshDashboardStats, 10000);
+
+// Also refresh when page gains focus
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        refreshDashboardStats();
+    }
+});
+</script>
+{% endblock %}

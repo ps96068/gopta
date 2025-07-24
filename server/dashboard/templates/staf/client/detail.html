@@ -1,0 +1,419 @@
+<!-- server/dashboard/templates/staff/client/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ client.first_name or 'Client' }} {{ client.last_name or '' }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}
+{{ client.first_name or 'Client' }} {{ client.last_name or '' }}
+{% endblock %}
+
+{% block page_actions %}
+    <div class="btn-group">
+        <a href="{{ dashboard_prefix }}/client" class="btn btn-sm btn-secondary">
+            <i class="bi bi-arrow-left"></i> Înapoi
+        </a>
+        {% if can_update(staff, 'client') %}
+        <a href="{{ dashboard_prefix }}/client/{{ client.id }}/edit" class="btn btn-sm btn-primary">
+            <i class="bi bi-pencil"></i> Editează
+        </a>
+
+        <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-bs-toggle="dropdown">
+    <i class="bi bi-gear"></i> Acțiuni
+</button>
+<ul class="dropdown-menu">
+    <li><h6 class="dropdown-header">Schimbă status utilizator</h6></li>
+    {% for status in user_statuses %}
+    {% if status[0] != client.status.value %}
+    <li>
+        <form method="post" action="{{ dashboard_prefix }}/client/{{ client.id }}/update-status">
+            {{ csrf_input|safe }}
+            <input type="hidden" name="new_status" value="{{ status[0] }}">
+            <button type="submit" class="dropdown-item">
+                <i class="bi bi-arrow-right-circle"></i> {{ status[1] }}
+            </button>
+        </form>
+    </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if current_staff.role.value == 'super_admin' %}
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Acțiuni Super Admin</h6></li>
+                    <li>
+                        <form method="post" action="{{ dashboard_prefix }}/client/{{ client.id }}/toggle-active">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="dropdown-item text-danger"
+                                    onclick="return confirm('Sigur doriți să {{ 'dezactivați' if client.is_active else 'activați' }} clientul {{ client.first_name }} {{ client.last_name }}?')">
+                                <i class="bi bi-{{ 'x-circle' if client.is_active else 'check-circle' }}"></i>
+                                {% if client.is_active %}Dezactivează Client{% else %}Activează Client{% endif %}
+                            </button>
+                        </form>
+                    </li>
+            {% endif %}
+                </ul>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block content %}
+
+{% if not client.is_active %}
+<div class="alert alert-warning" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Client Inactiv:</strong> Acest client a fost dezactivat de un Super Administrator.
+    {% if current_staff.role.value == 'super_admin' %}
+        Puteți reactiva clientul din meniul Acțiuni.
+    {% else %}
+        Pentru reactivare, contactați un Super Administrator.
+    {% endif %}
+</div>
+{% endif %}
+
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <!-- Status -->
+
+<div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6 class="text-muted mb-1">Status Client</h6>
+                    <h3 class="mb-0">
+                        <span class="badge bg-{{ client.status.value }} fs-5">
+                            {{ client.status.name }}
+                        </span>
+                    </h3>
+                </div>
+                <div class="opacity-25">
+                    <i class="bi bi-person-badge text-{{ client.status.value }}"
+                       style="font-size: 2.5rem;"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-top">
+                <small class="text-muted">Client din:</small>
+                <br>
+                <strong>{{ client.created_at|date_only }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+    <!-- Comenzi -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Comenzi</h6>
+                        <h1 class="mb-0 text-success">{{ stats.orders }}</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-cart-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">Valoare totală:</small>
+                    <br>
+                    <strong>{{ stats.spent|int }} MDL</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cereri -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Cereri Oferte</h6>
+                        <h1 class="mb-0 text-warning">{{ stats.requests }}</h1>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-envelope" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">Ultima activitate:</small>
+                    <br>
+                    <strong>{{ client.updated_at|datetime_local }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Left Column - Client Info -->
+    <div class="col-lg-4">
+        <!-- Contact Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-primary me-2"></i>
+                    Informații Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="avatar-circle bg-{{ client.status.value|lower }} text-white mx-auto mb-3"
+                         style="width: 100px; height: 100px; font-size: 36px;">
+                        {{ (client.first_name or 'A')[0] }}{{ (client.last_name or '')[0] }}
+                    </div>
+                    <h5>{{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}</h5>
+                    <span class="badge bg-{{ client.status.value|lower }}">
+                        {{ client.status.value }}
+                    </span>
+                </div>
+
+                <dl class="row">
+                    <dt class="col-5">Telegram ID:</dt>
+                    <dd class="col-7">{{ client.telegram_id }}</dd>
+
+                    {% if client.username %}
+                    <dt class="col-5">Username:</dt>
+                    <dd class="col-7">
+                        <a href="https://t.me/{{ client.username }}" target="_blank">
+                            @{{ client.username }}
+                        </a>
+                    </dd>
+                    {% endif %}
+
+                    {% if client.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">
+                        <a href="tel:{{ client.phone }}">{{ client.phone }}</a>
+                    </dd>
+                    {% endif %}
+
+                    {% if client.email %}
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">
+                        <a href="mailto:{{ client.email }}">{{ client.email }}</a>
+                    </dd>
+                    {% endif %}
+
+                    <dt class="col-5">Limbă:</dt>
+                    <dd class="col-7">{{ client.language_code|upper }}</dd>
+
+                    <dt class="col-5">Activ:</dt>
+                    <dd class="col-7">
+                        {% if client.is_active %}
+                        <span class="badge bg-success">Da</span>
+                        {% else %}
+                        <span class="badge bg-danger">Nu</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-charge text-warning me-2"></i>
+                    Acțiuni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <!-- ACTUALIZAT: Link către comenzile clientului cu parametrul client_id -->
+                    <a href="{{ dashboard_prefix }}/order?client_id={{ client.id }}"
+                       class="btn btn-light">
+                        <i class="bi bi-cart text-success"></i> Vezi toate comenzile
+                    </a>
+
+                    <a href="{{ dashboard_prefix }}/user_request?client_id={{ client.id }}"
+                       class="btn btn-light">
+                        <i class="bi bi-envelope text-warning"></i> Vezi toate cererile
+                    </a>
+
+                    <!-- ADĂUGAT: Link către coșurile clientului cu parametrul client_id -->
+                    <a href="{{ dashboard_prefix }}/cart?client_id={{ client.id }}"
+                       class="btn btn-light">
+                        <i class="bi bi-cart text-info"></i> Vezi toate coșurile
+                    </a>
+
+                    <hr class="my-2">
+
+                    <a href="https://t.me/{{ client.username or client.telegram_id }}"
+                       target="_blank" class="btn btn-light">
+                        <i class="bi bi-telegram text-primary"></i> Contactează pe Telegram
+                    </a>
+
+                    {% if client.email %}
+                    <a href="mailto:{{ client.email }}" class="btn btn-light">
+                        <i class="bi bi-envelope text-info"></i> Trimite email
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Activity -->
+    <div class="col-lg-8">
+        <!-- Recent Orders -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart text-success me-2"></i>
+                        Comenzi Recente
+                    </h5>
+                    <!-- ACTUALIZAT: Link către comenzile clientului cu parametrul client_id -->
+                    <a href="{{ dashboard_prefix }}/order?client_id={{ client.id }}"
+                       class="btn btn-sm btn-light">
+                        Vezi toate
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for order in recent_orders %}
+                    <a href="{{ dashboard_prefix }}/order/{{ order.id }}"
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">#{{ order.order_number }}</h6>
+                                <p class="mb-1 text-muted">
+                                    {{ order.created_at|datetime_local }}
+                                </p>
+                                <span class="badge bg-{{ order.status.value|lower }}">
+                                    {{ order.status.value }}
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <h5 class="mb-0">{{ order.total_amount|int }} MDL</h5>
+                            </div>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-cart fs-1"></i>
+                        <p class="mt-2 mb-0">Nu sunt comenzi</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Requests -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-envelope text-warning me-2"></i>
+                        Cereri Recente
+                    </h5>
+                    <a href="{{ dashboard_prefix }}/user_request?client_id={{ client.id }}"
+                       class="btn btn-sm btn-light">
+                        Vezi toate
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for req in recent_requests %}
+                    <a href="{{ dashboard_prefix }}/user_request/{{ req.id }}"
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    {{ req.request_type.value|title }}
+                                    {% if req.product %}
+                                    - {{ req.product.name|truncate(30) }}
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-1 text-muted small">
+                                    {{ req.message|truncate(100) }}
+                                </p>
+                                <small class="text-muted">
+                                    {{ req.created_at|datetime_local }}
+                                </small>
+                            </div>
+                            <div>
+                                {% if req.is_processed %}
+                                <span class="badge bg-success">Procesat</span>
+                                {% else %}
+                                <span class="badge bg-warning">În așteptare</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-envelope fs-1"></i>
+                        <p class="mt-2 mb-0">Nu sunt cereri</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Badge colors pentru user status */
+.badge.bg-anonim {
+    background-color: #6c757d !important;
+}
+
+.badge.bg-user {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-instalator {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+}
+
+.badge.bg-pro {
+    background-color: #17a2b8 !important;
+}
+
+/* Text colors pentru icons */
+.text-anonim { color: #6c757d !important; }
+.text-user { color: #28a745 !important; }
+.text-instalator { color: #ffc107 !important; }
+.text-pro { color: #17a2b8 !important; }
+
+
+.badge.bg-new,
+.badge.bg-pending {
+    background-color: #ffc107 !important;
+}
+
+.badge.bg-processing {
+    background-color: #17a2b8 !important;
+}
+
+.badge.bg-completed {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-cancelled {
+    background-color: #dc3545 !important;
+}
+</style>
+{% endblock %}
+
+
+

@@ -1,80 +1,60 @@
-from __future__ import annotations
+# models/user/staff.py
+"""
+Staff model pentru utilizatorii Dashboard.
 
-import re
-import enum
+Staff reprezintă angajații PCE care gestionează platforma prin Dashboard.
+Autentificare se face cu email/password.
+
+Roluri și permisiuni:
+- super_admin: Acces total la toate funcționalitățile
+- manager: Acces complet cu excepția Staff management și marketing
+- supervisor: Doar vizualizare (read-only)
+
+În PCE-start, Staff operează ca proxy pentru Default Vendor.
+"""
+
+from __future__ import annotations
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
-from starlette.requests import Request
-from sqlalchemy import Index, String, Boolean, Enum, DateTime, ForeignKey, Integer, CheckConstraint
-from sqlalchemy.orm import relationship, validates, Mapped, mapped_column, Relationship
+import enum
+import re
+import bcrypt
+
+from sqlalchemy import String, Boolean, Enum, Index, DateTime, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.sql import func
 
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
+from models import StaffRole
+
+if TYPE_CHECKING:
+    from models import Order, RequestResponse
 
 
-from cfg import Base
-from ..base import CreatedAtMixin, IsActiveMixin
 
-
-# models/user/staff.py
-
-class StaffRole(enum.Enum):
-    super_admin = "super_admin"
-    manager = "manager"
-    supervisor = "supervisor"
-
-
-class Staff(Base, CreatedAtMixin, IsActiveMixin):
+class Staff(Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin):
+    """Model pentru staff-ul care procesează comenzi."""
     __tablename__ = "staff"
-    __table_args__ = (
-        Index("ix_staff_role_active", "role", "is_active"),
-    )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=True)
-    username: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=False)
-    phone_number: Mapped[str | None] = mapped_column(String(15), nullable=True, index=True)
-    email: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[StaffRole | None] = mapped_column(Enum(StaffRole), default=StaffRole.supervisor, nullable=False)
-    last_visit: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
 
-    # Relații
-    posts: Mapped[list["Post"]] = relationship("Post", back_populates="post_author")
-    categories_created: Mapped[list["Category"]] = relationship(
-        "Category",
-        foreign_keys="Category.author_id",
-        back_populates="category_author"
-    )
-    categories_modified: Mapped[list["Category"]] = relationship(
-        "Category",
-        foreign_keys="Category.last_modified_by",
-        back_populates="last_modifier"
-    )
-    products: Mapped[list["Product"]] = relationship("Product", back_populates="product_author")
-    product_images: Mapped[list["ProductImage"]] = relationship("ProductImage", back_populates="product_image_author")
-    product_prices: Mapped[list["ProductPrice"]] = relationship("ProductPrice", back_populates="product_price_author")
-    img_author: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="img_author")
-    edit_history: Mapped[list["PostEditHistory"]] = relationship("PostEditHistory", back_populates="staff")
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(20))
 
-    @validates("phone_number")
-    def validate_phone(self, key, number: str | None):
-        if number is not None and not re.match(r"^\+?[0-9]{7,15}$", number):
-            raise ValueError("Numărul de telefon are un format invalid")
-        return number
+    # Rol
+    role: Mapped[StaffRole] = mapped_column(Enum(StaffRole), nullable=False, default=StaffRole.SUPERVISOR)
 
-    @validates("email")
-    def validate_email(self, key, email: str | None):
-        if email is None:
-            return None
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            raise ValueError("Adresa de email este invalidă")
-        return email
+    # Permisiuni granulare pentru Manager
+    can_manage_clients: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    can_manage_products: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    can_manage_orders: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    def __repr__(self):
-        return f"<Staff(id={self.id}, username='{self.username}', role='{self.role}')>"
+    # Pentru tracking
+    last_login: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
-    def __str__(self):
-        return f"{self.id}_{self.username}-({self.role})"
-
-
-
-
+    # Relationships
+    processed_orders: Mapped[List["Order"]] = relationship(back_populates="processed_by", cascade="all, delete-orphan")
+    responses: Mapped[List["RequestResponse"]] = relationship(back_populates="staff", cascade="all, delete-orphan")

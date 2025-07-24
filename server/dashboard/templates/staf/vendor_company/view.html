@@ -1,0 +1,486 @@
+<!-- templates/dashboard/staff/vendor_company/view.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ company.name }} - Dashboard{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">{{ company.name }}</h2>
+                <div class="d-flex gap-2">
+                    {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/edit" class="btn btn-warning">
+                            <i class="bi bi-pencil me-2"></i>Editează
+                        </a>
+                    {% endif %}
+                    {% if not company.is_verified and current_staff.role.value == 'super_admin' %}
+                        <form method="post" action="/dashboard/staff/vendor_company/{{ company.id }}/verify" class="d-inline">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-2"></i>Verifică
+                            </button>
+                        </form>
+                    {% endif %}
+                    {% if current_staff.role.value == 'super_admin' %}
+                            <form method="post" action="/dashboard/staff/vendor_company/{{ company.id }}/toggle-status" class="d-inline">
+                                {{ csrf_input|safe }}
+                                <button type="submit" class="btn btn-{{ 'danger' if company.is_active else 'success' }}"
+                                    onclick="return confirm('Sigur doriți să {{ 'dezactivați' if company.is_active else 'activați' }} compania {{ company.name }}?')">
+                                    <i class="bi bi-{{ 'x-circle' if company.is_active else 'check-circle' }} me-2"></i>
+                                        {{ 'Dezactivează' if company.is_active else 'Activează' }}
+                                </button>
+                            </form>
+                    {% endif %}
+
+                    <a href="/dashboard/staff/vendor_company/" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Înapoi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status și Statistici -->
+<!--    <div class="row mb-4">-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-primary text-white">-->
+<!--                <div class="card-body">-->
+<!--                    <h6 class="text-white-50">Total Produse</h6>-->
+<!--                    <h3 class="mb-0">{{ stats.total_products }}</h3>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-success text-white">-->
+<!--                <div class="card-body">-->
+<!--                    <h6 class="text-white-50">Comenzi</h6>-->
+<!--                    <h3 class="mb-0">{{ stats.total_orders }}</h3>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-info text-white">-->
+<!--                <div class="card-body">-->
+<!--                    <h6 class="text-white-50">Venituri Totale</h6>-->
+<!--                    <h3 class="mb-0">{{ "%.2f"|format(stats.total_revenue) }} MDL</h3>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--        <div class="col-md-3">-->
+<!--            <div class="card bg-warning text-white">-->
+<!--                <div class="card-body">-->
+<!--                    <h6 class="text-white-50">Angajați</h6>-->
+<!--                    <h3 class="mb-0">{{ company.staff_members|length }}</h3>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+<!--    </div>-->
+
+    {% if current_staff.role.value == 'manager' and not company.is_active %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Companie Inactivă:</strong> Această companie a fost dezactivată de un Super Administrator.
+                    Puteți edita detaliile, dar nu puteți activa compania.
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Produse</h6>
+                    <h3 class="mb-0">{{ stats.total_products }}</h3>
+                    {% if stats.get('inactive_products', 0) > 0 %}
+                        <small class="text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {{ stats.inactive_products }} inactive
+                        </small>
+                    {% else %}
+                        <small class="text-success" style="color: white !important;">
+                            <i class="bi bi-check-circle me-1"></i>
+                            Toate active
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Comenzi</h6>
+                    <h3 class="mb-0">{{ stats.total_orders }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Venituri Totale</h6>
+                    <h3 class="mb-0">{{ "%.2f"|format(stats.total_revenue) }} MDL</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Angajați</h6>
+                    <h3 class="mb-0">{{ company.staff_members|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if stats.get('inactive_products', 0) > 0 %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Atenție:</strong> {{ stats.inactive_products }} produse sunt dezactivate.
+                            {% if not company.is_active %}
+                                Reactivează compania pentru a permite reactivarea produselor.
+                            {% endif %}
+                        </div>
+                        <div>
+                            <a href="/dashboard/staff/vendor_company/{{ company.id }}/products-status"
+                               class="btn btn-warning btn-sm me-2">
+                                <i class="bi bi-eye me-1"></i>Vezi Status
+                            </a>
+                            {% if current_staff.role.value in ['manager', 'super_admin'] and company.is_active %}
+                                <form method="post"
+                                      action="/dashboard/staff/vendor_company/{{ company.id }}/reactivate-products"
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Reactivezi toate produsele companiei?')">
+                                    {{ csrf_input|safe }}
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>Reactivează
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+
+
+
+
+    <div class="row">
+        <!-- Informații Companie -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informații Companie</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Denumire Juridică:</td>
+                            <td>{{ company.legal_name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">CUI/Cod Fiscal:</td>
+                            <td>{{ company.tax_id }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Email:</td>
+                            <td><a href="mailto:{{ company.email }}">{{ company.email }}</a></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Telefon:</td>
+                            <td><a href="tel:{{ company.phone }}">{{ company.phone }}</a></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Adresă:</td>
+                            <td>{{ company.address }}</td>
+                        </tr>
+                        {% if company.website %}
+                        <tr>
+                            <td class="text-muted">Website:</td>
+                            <td><a href="{{ company.website }}" target="_blank">{{ company.website }}</a></td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="text-muted">Status:</td>
+                            <td>
+                                {% if company.is_verified %}
+                                    <span class="badge bg-success">Verificată</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Neverificată</span>
+                                {% endif %}
+                                {% if company.is_active %}
+                                    <span class="badge bg-success">Activă</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactivă</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if company.verified_at %}
+                        <tr>
+                            <td class="text-muted">Verificată la:</td>
+                            <td>{{ company.verified_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Date Bancare -->
+            {% if company.bank_account %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Date Bancare</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 40%;">Cont Bancar:</td>
+                            <td>{{ company.bank_account }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Bancă:</td>
+                            <td>{{ company.bank_name }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Setări și Descriere -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Setări Platformă</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td class="text-muted" style="width: 50%;">Comision Platformă:</td>
+                            <td><strong>{{ company.commission_rate }}%</strong></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Termen Plată:</td>
+                            <td><strong>{{ company.payment_terms_days }} zile</strong></td>
+                        </tr>
+                        {% if company.rating %}
+                        <tr>
+                            <td class="text-muted">Rating:</td>
+                            <td>
+                                {% for i in range(5) %}
+                                    <i class="bi bi-star{% if i < company.rating|int %}-fill{% endif %} {% if i < company.rating|int %}text-warning{% else %}text-muted{% endif %}"></i>
+                                {% endfor %}
+                                ({{ company.rating }})
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            {% if company.description %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Descriere</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ company.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Acțiuni Rapide -->
+<!--            <div class="card">-->
+<!--                <div class="card-header">-->
+<!--                    <h5 class="mb-0">Acțiuni Rapide</h5>-->
+<!--                </div>-->
+<!--                <div class="card-body">-->
+<!--                    <div class="d-grid gap-2">-->
+<!--                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/products" class="btn btn-primary">-->
+<!--                            <i class="bi bi-box me-2"></i>Vezi Produse ({{ stats.total_products }})-->
+<!--                        </a>-->
+<!--                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/staff" class="btn btn-info">-->
+<!--                            <i class="bi bi-people me-2"></i>Vezi Angajați ({{ company.staff_members|length }})-->
+<!--                        </a>-->
+<!--                        {% if current_staff.role.value in ['manager', 'super_admin'] %}-->
+<!--                        <a href="/dashboard/staff/vendor_staff/create?company_id={{ company.id }}" class="btn btn-success">-->
+<!--                            <i class="bi bi-person-plus me-2"></i>Adaugă Angajat-->
+<!--                        </a>-->
+<!--                        {% endif %}-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Acțiuni Rapide</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/products" class="btn btn-primary">
+                            <i class="bi bi-box me-2"></i>Vezi Produse ({{ stats.total_products }})
+                        </a>
+
+                        <!-- Nou: Link către status produse -->
+                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/products-status"
+                           class="btn btn-{% if stats.get('inactive_products', 0) > 0 %}warning{% else %}outline-primary{% endif %}">
+                            <i class="bi bi-bar-chart me-2"></i>Status Produse
+                            {% if stats.get('inactive_products', 0) > 0 %}
+                                <span class="badge bg-light text-dark ms-1">{{ stats.inactive_products }} inactive</span>
+                            {% endif %}
+                        </a>
+
+                        <a href="/dashboard/staff/vendor_company/{{ company.id }}/staff" class="btn btn-info">
+                            <i class="bi bi-people me-2"></i>Vezi Angajați ({{ company.staff_members|length }})
+                        </a>
+                        {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                        <a href="/dashboard/staff/vendor_staff/create?company_id={{ company.id }}" class="btn btn-success">
+                            <i class="bi bi-person-plus me-2"></i>Adaugă Angajat
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+
+
+
+
+
+
+
+        </div>
+    </div>
+
+    <!-- Produse Recente -->
+    {% if recent_products %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Produse Recente</h5>
+                    <a href="/dashboard/staff/vendor_company/{{ company.id }}/products" class="btn btn-sm btn-primary">
+                        Vezi Toate
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Nume</th>
+                                    <th>Categorie</th>
+                                    <th>Stoc</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in recent_products %}
+                                <tr>
+                                    <td>{{ product.sku }}</td>
+                                    <td>{{ product.name }}</td>
+                                    <td>
+                                        <!-- SOLUȚIA PRINCIPALĂ: verificare sigură pentru category -->
+                                        {% if product.category %}
+                                            {{ product.category.name }}
+                                        {% else %}
+                                            <span class="text-muted">Necategorizat</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.in_stock %}
+                                            <span class="badge bg-success">În stoc</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Lipsă stoc</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="/dashboard/staff/product/{{ product.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Comenzi Recente -->
+    {% if recent_orders %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Comenzi Recente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nr. Comandă</th>
+                                    <th>Client</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.order_number }}</td>
+                                    <td>
+                                        <!-- Verificare sigură pentru client -->
+                                        {% if order.client %}
+                                            {{ order.client.first_name or '' }} {{ order.client.last_name or '' }}
+                                        {% else %}
+                                            <span class="text-muted">Client necunoscut</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ "%.2f"|format(order.total_amount) }} MDL</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if order.status.value == 'completed' else 'warning' }}">
+                                            {{ order.status.value }}
+                                        </span>
+                                    </td>
+                                    <td>{{ order.created_at.strftime('%d.%m.%Y') }}</td>
+                                    <td>
+                                        <a href="/dashboard/staff/order/{{ order.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+

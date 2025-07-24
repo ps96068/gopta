@@ -1,0 +1,313 @@
+<!-- server/dashboard/templates/category/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Categorii - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Categorii{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    {% if can_create(staff, 'category') %}
+    <a href="{{ dashboard_prefix }}/category/create" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-circle"></i> Categorie Nouă
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/import?model=category" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-upload"></i> Import
+    </a>
+    <a href="{{ dashboard_prefix }}/export?model=category" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        Categorie nouă creată cu succes!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endif %}
+{% if request.query_params.get('success') == 'status_toggled' %}
+    <div class="alert alert-success alert-dismissible fade show">
+        <i class="bi bi-check-circle me-2"></i>
+        Status categorie actualizat cu succes!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Categorii</h6>
+                        <h1 class="mb-0 text-primary">{{ total_categories }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-tags" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Categorii Root</h6>
+                        <h1 class="mb-0 text-info">{{ total }}</h1>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-diagram-3" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Produse Total</h6>
+                        <h1 class="mb-0 text-success">0</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-box-seam" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Search -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label">Caută categorie</label>
+                        <input type="search" name="search" class="form-control"
+                               placeholder="Nume sau slug..."
+                               value="{{ search_query or '' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Caută
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ dashboard_prefix }}/category" class="btn btn-light w-100">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetează
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Tree -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-diagram-3 text-primary me-2"></i>
+                    Structură Categorii
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="50">ID</th>
+                                <th>Categorie</th>
+                                <th width="120">Slug</th>
+                                <th width="100" class="text-center">Status</th>
+                                <th width="100" class="text-center">Produse</th>
+                                <th width="100" class="text-center">Ordine</th>
+                                <th width="150">Creat</th>
+                                <th width="120" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                            <tr>
+                                <td><small class="text-muted">#{{ category.id }}</small></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-folder text-warning me-2"></i>
+                                        <div>
+                                            <a href="{{ dashboard_prefix }}/category/{{ category.id }}"
+                                               class="text-decoration-none text-dark fw-bold">
+                                                {{ category.name }}
+                                            </a>
+                                            {% if category.children %}
+                                            <small class="text-muted">
+                                                ({{ category.children|length }} subcategorii)
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><code>{{ category.slug }}</code></td>
+
+                                <td class="text-center">
+                                    {% if category.is_active %}
+                                        <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-center">
+                                    <span class="badge bg-info">{{ category_products.get(category.id, 0) }}</span>
+                                </td>
+                                <td class="text-center">{{ category.sort_order }}</td>
+                                <td><small>{{ category.created_at|datetime_local }}</small></td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/category/{{ category.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if can_update(staff, 'category') %}
+                                        <a href="{{ dashboard_prefix }}/category/{{ category.id }}/edit"
+                                           class="btn btn-outline-secondary" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if can_create(staff, 'category') %}
+                                        <a href="{{ dashboard_prefix }}/category/create?parent_id={{ category.id }}"
+                                           class="btn btn-outline-success" title="Adaugă subcategorie">
+                                            <i class="bi bi-plus"></i>
+                                        </a>
+                                        {% endif %}
+
+
+                                        {% if can_update(staff, 'category') %}
+                                            <form method="post"
+                                                  action="{{ dashboard_prefix }}/category/{{ category.id }}/toggle-active"
+                                                  style="display: inline;">
+                                                {{ csrf_input|safe }}
+                                                <button type="submit"
+                                                        class="btn btn-outline-{{ 'danger' if category.is_active else 'success' }} btn-sm"
+                                                        title="{% if category.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                                                    <i class="bi bi-{{ 'x-circle' if category.is_active else 'check-circle' }}"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+
+
+
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Subcategorii -->
+                            {% for child in category.children %}
+                            <tr class="bg-light bg-opacity-50">
+                                <td><small class="text-muted">#{{ child.id }}</small></td>
+                                <td>
+                                    <div class="d-flex align-items-center ps-4">
+                                        <i class="bi bi-folder-fill text-info me-2"></i>
+                                        <a href="{{ dashboard_prefix }}/category/{{ child.id }}"
+                                           class="text-decoration-none text-dark">
+                                            {{ child.name }}
+                                        </a>
+                                    </div>
+                                </td>
+                                <td><code>{{ child.slug }}</code></td>
+
+
+                                <td class="text-center">
+                                    {% if category.is_active %}
+                                        <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+
+
+                                <td class="text-center">
+                                    <span class="badge bg-info">0</span>
+                                </td>
+                                <td class="text-center">{{ child.sort_order }}</td>
+                                <td><small>{{ child.created_at|datetime_local }}</small></td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/category/{{ child.id }}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if can_update(staff, 'category') %}
+                                            <a href="{{ dashboard_prefix }}/category/{{ child.id }}/edit"
+                                               class="btn btn-outline-secondary btn-sm">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+
+
+                                            <form method="post"
+                                                  action="{{ dashboard_prefix }}/category/{{ child.id }}/toggle-active"
+                                                  style="display: inline;">
+                                                {{ csrf_input|safe }}
+                                                <button type="submit"
+                                                        class="btn btn-outline-{{ 'danger' if child.is_active else 'success' }} btn-sm"
+                                                        title="{% if child.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                                                    <i class="bi bi-{{ 'x-circle' if child.is_active else 'check-circle' }}"></i>
+                                                </button>
+                                            </form>
+
+
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="bi bi-tags fs-1"></i>
+                                    <p class="mt-2">Nu sunt categorii create</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Check pentru success messages
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (urlParams.get('success') === 'created') {
+        Dashboard.showToast('Categorie creată cu succes!', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (urlParams.get('success') === 'status_toggled') {
+        Dashboard.showToast('Status actualizat cu succes!', 'success');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+</script>
+{% endblock %}

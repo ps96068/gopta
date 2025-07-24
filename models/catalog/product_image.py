@@ -1,81 +1,54 @@
-from __future__ import annotations
-
-import re
-from datetime import datetime
-from sqlalchemy import Index, text, String, ForeignKey, Boolean, DateTime, event, UniqueConstraint, Integer
-from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
-from sqlalchemy.sql import func
-
-
-from cfg import Base
-from models.base import CreatedAtMixin, UpdatedAtMixin
-
-
 # models/catalog/product_image.py
+"""
+ProductImage model pentru imaginile produselor.
 
-class ProductImage(Base, CreatedAtMixin, UpdatedAtMixin):
+Fiecare produs poate avea maxim 4 imagini, dintre care una este principală.
+Imaginile sunt stocate local în directorul static și sunt șterse fizic
+când înregistrarea este ștearsă din baza de date.
+
+Business Rules:
+- Maxim 4 imagini per produs
+- O singură imagine poate fi marcată ca principală
+- Formaturi acceptate: jpg, jpeg, png
+- Dimensiune maximă: 2MB
+- Ștergerea din BD implică ștergerea fizică a fișierului
+"""
+
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
+import os
+import re
+from pathlib import Path
+
+from sqlalchemy import String, Integer, Boolean, ForeignKey, Index, UniqueConstraint, CheckConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.ext.hybrid import hybrid_property
+
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
+
+if TYPE_CHECKING:
+    from .product import Product
+
+
+class ProductImage(Base, CreatedAtMixin):
+    """Model pentru imaginile produselor."""
     __tablename__ = "product_images"
-    # __table_args__ = (
-    #     UniqueConstraint("product_id", "is_primary", name="uix_product_primary_img"),
-    # )
-    __table_args__ = (
-        Index(
-            "uix_product_primary_img", "product_id",
-            postgresql_where=text("is_primary")
-        ),
-    )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"))
-    image_path: Mapped[str] = mapped_column(String, nullable=False, default="static/shop/product/prod_default.png")
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
 
-    author_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), nullable=False)
-    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Path către imagine
+    image_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)  # în bytes
 
-    # Relație
-    product: Mapped["Product"] = relationship("Product", back_populates="images")
-    product_image_author: Mapped["Staff"] = relationship("Staff", foreign_keys=[author_id], back_populates="product_images")
+    alt_text: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Pentru ordonare
+    is_primary: Mapped[bool] = mapped_column(default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Relationships
+    product: Mapped["Product"] = relationship(back_populates="images")
 
 
-
-    @validates('image_path')
-    def validate_image_path(self, key, value):
-        if not value.strip():
-            raise ValueError("Calea către imagine nu poate fi goală.")
-        if not re.match(r".*\.(jpg|jpeg|png)$", value, re.IGNORECASE):
-            raise ValueError("Imaginea trebuie să aibă o extensie validă (.jpg, .jpeg, .png)")
-        return value
-
-
-
-
-# @event.listens_for(ProductImage, "before_insert")
-# def receive_before_insert(mapper, connection, target):
-#     """ "listen for the 'before_insert' event" """
-#
-#     print("ProductImage - receive_before_insert")
-#
-#     print(f"ProductImage - receive_before_insert => mapper = {mapper}")
-#     print(f"ProductImage - receive_before_insert => connection = {connection}")
-#     print(f"ProductImage - receive_before_insert => target = {target}")
-#     print(f"ProductImage - receive_before_insert => target.post_id = {target.product_id}")
-#     print(f"ProductImage - receive_before_insert => target.image = {target.image}")
-#
-#
-#     if target.product_id:
-#         # product_id = str(target.product_id)
-#         product_id = f"product-{target.product_id}"
-#     else:
-#         product_id = 'undefined'
-#
-#     print(f"ProductImage - receive_before_insert => post_id = {product_id}")
-#
-#
-#     # set_current_storage(
-#     #     path="./static/shop/product",
-#     #     storage_id=product_id
-#     # )
-#
-#
-#
-#     print("ProductImage - Inapoi in <receive_before_insert> din <set_current_storage>")

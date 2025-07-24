@@ -1,0 +1,42 @@
+Pentru Post (Blog):
+
+PostCreate - validare content minim și slug
+PostUpdate - toate câmpurile opționale
+PostResponse - calculează reading time și featured image
+PostFilter - căutare și filtrare avansată
+PostStats - metrici engagement
+PostSEO - verificare și score SEO
+
+
+Features importantePost:
+
+Calcul automat reading time pentru articole
+Detectare articole noi (ultimele 7 zile)
+SEO scoring pentru blog
+
+
+==============
+
+Ce am implementat pentru PostImage:
+Schemas principale:
+
+PostImageUpload - pentru endpoint upload
+PostImageCreate - salvare în DB după upload
+PostImageUpdate - modificare alt text, caption, featured
+PostImageResponse - include URL calculat și validare existență fișier
+
+Features speciale PostImage:
+
+PostImageBulkUpdate - actualizare mai multe imagini odată
+PostImagesReorder - drag & drop reordonare
+PostImageGallery - view complet galerie cu stats
+PostImageOptimization - sugestii și scor optimizare
+
+Funcționalități importante PostImage:
+
+Verificare automată existență fișier pe disk
+Calcul dimensiune în KB/MB
+Validare o singură imagine featured
+Scor optimizare (dimensiune, alt text, caption)
+Stats galerie (size total, completitudine)
+

@@ -1,0 +1,77 @@
+Ce am implementat pentru Invoice:
+Schemas principale:
+
+InvoiceCreate - generare din order existent
+InvoiceManualCreate - creare fără order (pentru situații speciale)
+InvoiceResponse - include status calculat și relații
+InvoiceSend - trimitere/retrimitere cu opțiuni
+
+Features speciale:
+
+InvoiceGenerateOptions - customizare template PDF
+InvoiceBulkAction - operații pe mai multe facturi
+InvoiceFilter - filtrare avansată pentru rapoarte
+
+Funcționalități importante:
+
+Validare automată total vs items
+Suport multilingv (ro/ru/en)
+Override date client când e necesar
+Send via Telegram/Email/Both
+Template-uri diferite pentru PDF
+
+Calculări automate:
+
+is_sent - verifică dacă a fost trimisă
+document_exists - verifică existența PDF
+days_since_created - pentru urmărire
+
+=====================
+
+Pentru Order:
+
+OrderCreate - din cart existent
+OrderStatusUpdate - cu notificare opțională
+OrderResponse - include date client și calcule (zile, status flags)
+OrderFilter - filtrare avansată
+OrderDashboardStats - metrici pentru dashboard
+
+Pentru OrderItem:
+
+OrderItemCreate - snapshot complet produs
+OrderItemResponse - cu date vendor și disponibilitate
+OrderItemsByVendor - grupare pentru procesare
+VendorOrderSummary - statistici per vendor
+OrderItemReorder - validare pentru re-comandă
+
+Features importante:
+
+Calculare automată subtotal și statistici
+Grupare pe vendor pentru notificări
+Export pentru rapoarte
+Suport re-order cu validare disponibilitate
+
+===========================
+
+Pentru Cart:
+
+CartResponse - include items_count și total calculat
+CartSummary - statistici detaliate
+AbandonedCartFilter - pentru marketing/recovery
+
+Pentru CartItem:
+
+CartItemAdd - validare cantitate max 999
+CartItemUpdate - doar cantitatea
+CartItemResponse - include date produs și subtotal calculat
+CartItemBulkAdd - adăugare multiplă cu validare duplicate
+CartValidation - verificări înainte de checkout
+
+Features speciale:
+
+Calculare automată subtotal
+Validare cantități
+Check prețuri modificate
+Suport pentru abandoned cart recovery
+
+

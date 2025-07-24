@@ -1,0 +1,401 @@
+<!-- server/dashboard/templates/user_request/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Cereri Utilizatori - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Cereri Utilizatori{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="?is_processed=false" class="btn btn-sm btn-outline-warning {% if is_processed_filter == 'false' %}active{% endif %}">
+        <i class="bi bi-clock"></i> Neprocesate
+    </a>
+    <a href="?is_processed=true" class="btn btn-sm btn-outline-success {% if is_processed_filter == 'true' %}active{% endif %}">
+        <i class="bi bi-check-circle"></i> Procesate
+    </a>
+    <a href="?" class="btn btn-sm btn-outline-secondary {% if not is_processed_filter %}active{% endif %}">
+        <i class="bi bi-list"></i> Toate
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards Row -->
+<div class="row g-3 mb-4">
+    <!-- Total Cereri -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Cereri</h6>
+                        <h1 class="mb-0 text-warning">{{ total }}</h1>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-envelope" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <small class="text-muted">Cereri neprocesate</small>
+                        </div>
+                        <div>
+                            <strong class="text-warning">{{ requests|selectattr('is_processed', 'equalto', false)|list|length }}</strong>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-warning" style="width: {{ (requests|selectattr('is_processed', 'equalto', false)|list|length / total * 100) if total > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tipuri Cereri -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Distribuție Tipuri</h6>
+                        <h1 class="mb-0 text-primary">{{ request_types|length }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-tags" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    {% for value, label in request_types[:3] %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">{{ label }}</small>
+                        <span class="badge bg-{{ 'primary' if value == 'product' else 'success' if value == 'order' else 'secondary' }}">
+                            {{ requests|selectattr('request_type.value', 'equalto', value)|list|length }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timp Mediu Răspuns -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="text-muted mb-1">Răspunsuri</h6>
+                        <h1 class="mb-0 text-info">{{ requests|selectattr('responses')|list|length }}</h1>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-chat-dots" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <div>
+                                <small class="text-muted d-block">Cu răspuns</small>
+                                <strong>{{ requests|selectattr('responses')|list|length }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div>
+                                <small class="text-muted d-block">Fără răspuns</small>
+                                <strong>{{ requests|rejectattr('responses')|list|length }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters & List Row -->
+<div class="row g-4">
+    <!-- Left Column - Filters -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel text-primary me-2"></i>
+                    Filtre
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="filterForm">
+                    <!-- Tip Cerere -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tip cerere</label>
+                        <select name="request_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Toate tipurile</option>
+                            {% for value, label in request_types %}
+                            <option value="{{ value }}" {% if request_type_filter == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_processed" value="" id="statusAll"
+                                   {% if not is_processed_filter %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusAll">
+                                Toate
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_processed" value="false" id="statusPending"
+                                   {% if is_processed_filter == "false" %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusPending">
+                                <i class="bi bi-clock text-warning"></i> Neprocesate
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_processed" value="true" id="statusProcessed"
+                                   {% if is_processed_filter == "true" %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusProcessed">
+                                <i class="bi bi-check-circle text-success"></i> Procesate
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Căutare</label>
+                        <div class="input-group input-group-sm">
+                            <input type="search" name="search" class="form-control"
+                                   placeholder="Caută..." value="{{ search_query or '' }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Reset -->
+                    <div class="d-grid">
+                        <a href="{{ dashboard_prefix }}/user_request" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetează filtre
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-charge text-warning me-2"></i>
+                    Acțiuni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ dashboard_prefix }}/export?model=user_request" class="btn btn-light btn-sm">
+                        <i class="bi bi-download text-info"></i> Export CSV
+                    </a>
+                    <a href="{{ dashboard_prefix }}/user_request/stats" class="btn btn-light btn-sm">
+                        <i class="bi bi-graph-up text-success"></i> Statistici
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - List -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-ul text-primary me-2"></i>
+                        Listă Cereri
+                        {% if is_processed_filter == "false" %}
+                        <span class="badge bg-warning ms-2">Neprocesate</span>
+                        {% elif is_processed_filter == "true" %}
+                        <span class="badge bg-success ms-2">Procesate</span>
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">
+                        {{ (page - 1) * per_page + 1 }} - {{ [page * per_page, total]|min }} din {{ total }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="request-list">
+                    {% for req in requests %}
+                    <div class="request-item d-flex align-items-start p-3 {% if not req.is_processed %}bg-warning bg-opacity-10{% endif %}">
+                        <div class="request-dot-wrapper">
+                            <div class="request-dot bg-{{ 'warning' if not req.is_processed else 'success' }}"></div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <h6 class="mb-0">
+                                            <a href="{{ dashboard_prefix }}/user_request/{{ req.id }}" class="text-decoration-none text-dark">
+                                                #{{ req.id }} - {{ req.client.first_name or 'Client' }} {{ req.client.last_name or '' }}
+                                            </a>
+                                        </h6>
+                                        <span class="badge bg-{{ 'primary' if req.request_type.value == 'product' else 'success' if req.request_type.value == 'order' else 'secondary' }} ms-2">
+                                            {{ req.request_type.value }}
+                                        </span>
+                                        {% if req.responses %}
+                                        <span class="badge bg-info ms-1">
+                                            <i class="bi bi-chat-dots"></i> {{ req.responses|length }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="text-muted mb-1 small">{{ req.message|truncate(100) }}</p>
+                                    <div class="d-flex align-items-center text-muted small">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span>{{ req.created_at|datetime_local }}</span>
+                                        {% if req.product %}
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-box me-1"></i>
+                                        <span>{{ req.product.name|truncate(30) }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="ms-3">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/user_request/{{ req.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <form method="post" action="{{ dashboard_prefix }}/user_request/{{ req.id }}/toggle-processed"
+                                              style="display: inline;">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit"
+                                                    class="btn btn-outline-{{ 'warning' if req.is_processed else 'success' }}"
+                                                    title="{% if req.is_processed %}Redeschide{% else %}Marchează procesat{% endif %}">
+                                                <i class="bi bi-{{ 'arrow-counterclockwise' if req.is_processed else 'check' }}"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2 mb-0">Nu sunt cereri {{ 'neprocesate' if is_processed_filter == 'false' else '' }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ p }}</span>
+                            </li>
+                            {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ p }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">{{ p }}</a>
+                            </li>
+                            {% elif p == page - 3 or p == page + 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Request List Styles */
+.request-list {
+    max-height: none;
+}
+
+.request-item {
+    border-bottom: 1px solid #f0f2f5;
+    transition: all 0.2s;
+}
+
+.request-item:hover {
+    background-color: #f8f9fa;
+}
+
+.request-item:last-child {
+    border-bottom: none;
+}
+
+.request-dot-wrapper {
+    position: relative;
+    padding-top: 3px;
+}
+
+.request-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.request-item.bg-warning.bg-opacity-10:hover {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+    .col-lg-3 {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh pentru cereri neprocesate
+{% if is_processed_filter == "false" %}
+setInterval(() => {
+    fetch('/dashboard/home/api/notifications')
+        .then(r => r.json())
+        .then(data => {
+            if (data.new_requests > 0) {
+                Dashboard.showToast('Cereri noi disponibile!', 'info');
+            }
+        });
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}

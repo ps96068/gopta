@@ -1,0 +1,462 @@
+<!-- server/dashboard/templates/staff/order/add_products.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/order/create" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-cart"></i> Vezi Coș
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left: Product Selection -->
+    <div class="col-lg-8">
+        <!-- Filters -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5">
+                        <input type="search" name="search" class="form-control"
+                               placeholder="Caută produs..." value="{{ search_query or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="category_id" class="form-select">
+                            <option value="">Toate categoriile</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Caută
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    Produse Disponibile
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for product in products %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 product-card">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ product.name }}</h6>
+                                <p class="text-muted small mb-2">
+                                    SKU: {{ product.sku }}<br>
+                                    {{ product.category.name }}
+                                </p>
+                                <div class="mb-2">
+                                    {% for price in product.prices %}
+                                        {% if price.price_type.value == cart.client.status.value %}
+                                        <div class="h5 mb-0 text-success">
+                                            {{ price.amount|int }} MDL
+                                        </div>
+                                        <small class="text-muted">Preț {{ price.price_type.value }}</small>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" value="1" min="1" max="999"
+                                           class="form-control form-control-sm me-2"
+                                           id="qty-{{ product.id }}"
+                                           style="width: 70px;">
+                                    <button class="btn btn-sm btn-primary flex-grow-1 btn-add-product"
+                                            onclick="addToCart({{ product.id }})">
+                                        <i class="bi bi-cart-plus"></i> Adaugă
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Nu s-au găsit produse</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Cart Summary -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+
+
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-check text-success me-2"></i>
+                    Rezumat Comandă
+                </h5>
+            </div>
+
+
+
+
+            <div class="card-body">
+                <!-- Client Info -->
+                <div class="mb-3">
+                    <h6>Client:</h6>
+                    <p class="mb-0">
+                        <strong>{{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</strong><br>
+                        <span class="badge bg-{{ cart.client.status.value|lower }}">
+                            {{ cart.client.status.value }}
+                        </span>
+                    </p>
+                </div>
+
+                <hr>
+
+                <!-- Cart Items -->
+
+                <div id="cartItems" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                    {% if cart.items %}
+                        {% for item in cart.items %}
+                        <div class="cart-item d-flex justify-content-between align-items-start mb-2 pb-2 border-bottom" data-item-id="{{ item.id }}">
+                            <div class="flex-grow-1">
+                                <small class="d-block fw-bold">{{ item.product.name }}</small>
+                                <small class="text-muted">
+                                    {{ item.quantity }} x {{ item.price_snapshot|int }} MDL
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <strong>{{ (item.quantity * item.price_snapshot)|int }} MDL</strong>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                        onclick="removeFromCart({{ item.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center" id="emptyCart">Coșul este gol</p>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <!-- Total -->
+                <div class="d-flex justify-content-between mb-3">
+                    <h5>Total:</h5>
+                    <h5 class="text-success" id="cartTotal">{{ cart_total|int }} MDL</h5>
+                </div>
+
+                <!-- Actions -->
+                <form method="post" action="{{ dashboard_prefix }}/order/finalize/{{ cart.id }}">
+                    {{ csrf_input|safe }}
+                    <div class="mb-3">
+                        <label class="form-label">Notă comandă (opțional)</label>
+                        <textarea name="client_note" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success"
+                                {% if not cart.items %}disabled{% endif %}>
+                            <i class="bi bi-check-circle"></i> Finalizează Comanda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notifications -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="successToast" class="toast" role="alert">
+        <div class="toast-header bg-success text-white">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong class="me-auto">Succes</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Loading state management
+let isLoading = false;
+
+function setLoading(loading) {
+    isLoading = loading;
+    // Disable/enable all add buttons
+    document.querySelectorAll('.btn-add-product').forEach(btn => {
+        btn.disabled = loading;
+        if (loading) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Adaugă';
+        } else {
+            btn.innerHTML = '<i class="bi bi-cart-plus"></i> Adaugă';
+        }
+    });
+}
+
+async function addToCart(productId) {
+    if (isLoading) return;
+
+    const quantity = document.getElementById(`qty-${productId}`).value;
+    const button = event.target.closest('button');
+
+    // Show loading on specific button
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    try {
+        const response = await fetch('/dashboard/staff/order/add-product-to-cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `cart_id={{ cart.id }}&product_id=${productId}&quantity=${quantity}`
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update cart display
+            updateCartDisplay(data);
+
+            // Show success toast
+            showToast('success', `${data.product_name} - ${data.quantity} buc. adăugat în coș`);
+
+            // Reset quantity
+            document.getElementById(`qty-${productId}`).value = 1;
+
+            // Flash the product card
+            const productCard = button.closest('.product-card');
+            productCard.classList.add('border-success');
+            setTimeout(() => {
+                productCard.classList.remove('border-success');
+            }, 1000);
+        } else {
+            showToast('danger', data.error || 'Eroare la adăugarea în coș');
+        }
+    } catch (error) {
+        showToast('danger', 'Eroare la comunicarea cu serverul');
+    } finally {
+        // Restore button
+        button.disabled = false;
+        button.innerHTML = originalContent;
+    }
+}
+
+async function removeFromCart(itemId) {
+    if (!confirm('Eliminați acest produs din coș?')) return;
+
+    try {
+        const response = await fetch(`/dashboard/staff/order/remove-cart-item/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Remove item from display with animation
+            const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+            if (itemElement) {
+                itemElement.style.transition = 'all 0.3s';
+                itemElement.style.opacity = '0';
+                itemElement.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    itemElement.remove();
+
+                    // Check if cart is empty
+                    if (data.items_count === 0) {
+                        document.getElementById('cartItems').innerHTML =
+                            '<p class="text-muted text-center" id="emptyCart">Coșul este gol</p>';
+                    }
+                }, 300);
+            }
+
+            // Update total
+            updateTotal(data.cart_total, data.items_count);
+
+            showToast('success', 'Produs eliminat din coș');
+        } else {
+            showToast('danger', data.error || 'Eroare la eliminarea din coș');
+        }
+    } catch (error) {
+        showToast('danger', 'Eroare la comunicarea cu serverul');
+    }
+}
+
+
+function updateCartDisplay(data) {
+    // Update cart items HTML
+    const cartItemsDiv = document.getElementById('cartItems');
+
+    // Remove empty cart message if exists
+    const emptyMsg = document.getElementById('emptyCart');
+    if (emptyMsg) {
+        emptyMsg.remove();
+    }
+
+    // Remove refresh reminder if exists
+    const reminder = document.getElementById('refreshReminder');
+    if (reminder) {
+        reminder.remove();
+    }
+
+    // Update with new HTML
+    cartItemsDiv.innerHTML = data.cart_items_html;
+
+    // Update total and count
+    updateTotal(data.cart_total, data.items_count);
+
+    // Enable finalize button - FIX: selector mai specific
+    const finalizeBtn = document.querySelector('form[action*="/order/finalize/"] button[type="submit"]');
+    if (finalizeBtn && data.items_count > 0) {
+        finalizeBtn.disabled = false;
+    }
+
+    // Highlight the newly added item
+    setTimeout(() => {
+        const newItem = document.querySelector(`[data-item-id="${data.item_id}"]`);
+        if (newItem) {
+            newItem.classList.add('highlight-new');
+            setTimeout(() => {
+                newItem.classList.remove('highlight-new');
+            }, 2000);
+        }
+    }, 100);
+}
+
+
+function updateTotal(total, itemsCount) {
+    // Update total
+    document.getElementById('cartTotal').textContent = `${Math.round(total)} MDL`;
+
+    // Update items count in header if exists
+    const itemsCountBadge = document.getElementById('itemsCount');
+    if (itemsCountBadge) {
+        itemsCountBadge.textContent = itemsCount;
+    }
+
+    // Enable/disable finalize button
+    const finalizeBtn = document.querySelector('button[type="submit"]');
+    if (finalizeBtn) {
+        finalizeBtn.disabled = itemsCount === 0;
+    }
+}
+
+function showToast(type, message) {
+    // Remove existing toasts
+    document.querySelectorAll('.toast').forEach(toast => {
+        bootstrap.Toast.getInstance(toast)?.hide();
+    });
+
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${type === 'success' ? '<i class="bi bi-check-circle me-2"></i>' : '<i class="bi bi-exclamation-triangle me-2"></i>'}
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    const container = document.getElementById('toastContainer');
+    if (container) {
+        container.innerHTML = toastHtml;
+        const toast = new bootstrap.Toast(container.querySelector('.toast'));
+        toast.show();
+    }
+}
+
+// Enter key to add product
+document.addEventListener('DOMContentLoaded', function() {
+    // Add enter key support for quantity inputs
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const productId = this.id.replace('qty-', '');
+                const addButton = this.parentElement.querySelector('button');
+                if (addButton) {
+                    addButton.click();
+                }
+            }
+        });
+    });
+});
+</script>
+
+<!-- Additional CSS for animations -->
+<style>
+.highlight-new {
+    animation: highlightPulse 1s ease-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: #d1f2eb;
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+
+.cart-item {
+    transition: all 0.3s ease;
+}
+
+.cart-item:hover {
+    background-color: #f8f9fa;
+}
+
+.product-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.product-card.border-success {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.2);
+}
+
+.btn-add-product:disabled {
+    cursor: not-allowed;
+}
+
+/* Toast position adjustment */
+.toast-container {
+    z-index: 1050;
+}
+</style>
+
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toastContainer"></div>
+</div>
+{% endblock %}

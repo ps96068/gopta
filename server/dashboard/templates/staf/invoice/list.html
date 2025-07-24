@@ -1,0 +1,529 @@
+<!-- server/dashboard/templates/staff/invoice/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    {% if filtered_client and back_url %}
+    <a href="{{ back_url }}" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> {{ back_text }}
+    </a>
+    {% endif %}
+
+    <a href="{{ dashboard_prefix }}/export?model=invoice" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'deleted' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Invoice șters cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Client Filter Info -->
+{% if filtered_client %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-person-fill me-2"></i>
+    <strong>Filtrare activă:</strong> Afișez doar documentele clientului
+    <strong>{{ filtered_client.first_name or 'Anonim' }} {{ filtered_client.last_name or '' }}</strong>
+    <a href="{{ dashboard_prefix }}/invoice" class="btn btn-sm btn-light ms-2">
+        <i class="bi bi-x"></i> Vezi toate
+    </a>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Oferte</h6>
+                        <h2 class="mb-0 text-primary">{{ stats.total_quotes }}</h2>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-file-earmark-text" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Oferte Active</h6>
+                        <h2 class="mb-0 text-warning">{{ stats.active_quotes }}</h2>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-clock" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Facturi</h6>
+                        <h2 class="mb-0 text-success">{{ stats.total_invoices }}</h2>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-receipt" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Rată Conversie</h6>
+                        <h2 class="mb-0 text-info">{{ stats.conversion_rate|round(1) }}%</h2>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-graph-up" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+                <small class="text-muted">Oferte → Comenzi</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            {% if client_filter %}
+            <input type="hidden" name="client_id" value="{{ client_filter }}">
+            {% endif %}
+
+            <div class="col-md-3">
+                <label class="form-label">Caută</label>
+                <input type="search" name="search" class="form-control"
+                       placeholder="Nr. document, client..."
+                       value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Tip</label>
+                <select name="invoice_type" class="form-select">
+                    <option value="">Toate</option>
+                    <option value="quote" {% if type_filter == 'quote' %}selected{% endif %}>Oferte</option>
+                    <option value="invoice" {% if type_filter == 'invoice' %}selected{% endif %}>Facturi</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">Toate</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expirate</option>
+                    <option value="converted" {% if status_filter == 'converted' %}selected{% endif %}>Convertite</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Caută
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ dashboard_prefix }}/invoice{% if client_filter %}?client_id={{ client_filter }}{% endif %}"
+                   class="btn btn-light w-100">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Invoices Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-receipt text-primary me-2"></i>
+                {% if filtered_client %}
+                    Documente {{ filtered_client.first_name or 'Client' }} {{ filtered_client.last_name or '' }}
+                {% else %}
+                    Listă Facturi și Oferte
+                {% endif %}
+            </h5>
+            <span class="badge bg-secondary">{{ total }} documente</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th width="150">Număr Document</th>
+                    <th width="80" class="text-center">Tip</th>
+                    {% if not filtered_client %}
+                    <th>Client</th>
+                    {% endif %}
+                    <th width="120" class="text-end">Valoare</th>
+                    <th width="120" class="text-center">Status</th>
+                    <th width="150">Creat la</th>
+                    <th width="100" class="text-center">Trimis</th>
+                    <th width="140" class="text-center">Acțiuni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>
+                        <a href="{{ dashboard_prefix }}/invoice/{{ invoice.id }}"
+                           class="text-decoration-none fw-bold">
+                            {{ invoice.invoice_number }}
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        {% if invoice.is_quote %}
+                            <span class="badge bg-primary">Ofertă</span>
+                        {% else %}
+                            <span class="badge bg-success">Factură</span>
+                        {% endif %}
+                    </td>
+                    {% if not filtered_client %}
+                    <td>
+                        <div>
+                            {{ invoice.client_name }}
+                            {% if invoice.client_email %}
+                            <br>
+                            <small class="text-muted">{{ invoice.client_email }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endif %}
+                    <td class="text-end">
+                        <strong>{{ invoice.total_amount|int }} MDL</strong>
+                    </td>
+
+
+                    <!-- SECTIUNEA DE STATUS - început -->
+
+<td class="text-center">
+    <span class="badge {{ invoice.status_badge }}">{{ invoice.status_text }}</span>
+    {% if invoice.is_quote and invoice.calculated_status == "active" %}
+        <br>
+        <small class="text-muted">
+            Exp: {{ invoice.valid_until|date_only }}
+        </small>
+    {% endif %}
+</td>
+
+                    <!-- SECTIUNEA DE STATUS - finish -->
+
+                    <td>
+                        <small>{{ invoice.created_at|datetime_local }}</small>
+                    </td>
+                    <td class="text-center">
+                        {% if invoice.sent_at %}
+                            <i class="bi bi-check-circle text-success" title="Trimis"></i>
+                            <br>
+                            <small class="text-muted">{{ invoice.sent_via }}</small>
+                        {% else %}
+                            <i class="bi bi-x-circle text-muted" title="Netrimis"></i>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{{ dashboard_prefix }}/invoice/{{ invoice.id }}"
+                               class="btn btn-outline-primary" title="Vezi detalii">
+                                <i class="bi bi-eye"></i>
+                            </a>
+
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a href="{{ dashboard_prefix }}/invoice/{{ invoice.id }}/download"
+                                           class="dropdown-item">
+                                            <i class="bi bi-download text-primary"></i> Descarcă PDF
+                                        </a>
+                                    </li>
+
+                                    {% if not invoice.sent_at %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a href="#" class="dropdown-item"
+                                           onclick="showSendModal({{ invoice.id }}); return false;">
+                                            <i class="bi bi-send text-info"></i> Trimite
+                                        </a>
+                                    </li>
+                                    {% endif %}
+
+                                    {% if invoice.is_quote and not invoice.converted_to_order and invoice.valid_until > now %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post"
+                                              action="{{ dashboard_prefix }}/invoice/quote/{{ invoice.id }}/convert">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit" class="dropdown-item"
+                                                    onclick="return confirm('Convertiți oferta în comandă?');">
+                                                <i class="bi bi-arrow-right-circle text-success"></i>
+                                                Convertește în Comandă
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+
+                                    {% if can_delete(user, 'invoice') and invoice.is_quote and not invoice.converted_to_order %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="post"
+                                              action="{{ dashboard_prefix }}/invoice/{{ invoice.id }}/delete">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit" class="dropdown-item text-danger"
+                                                    onclick="return confirm('Sigur ștergeți această ofertă?');">
+                                                <i class="bi bi-trash"></i> Șterge
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+
+                                    {% if can_update(user, 'invoice') and invoice.is_invoice and not invoice.is_cancelled %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a href="#" class="dropdown-item text-warning"
+                                           onclick="showCancelModal({{ invoice.id }}); return false;">
+                                            <i class="bi bi-x-circle"></i> Anulează Factura
+                                        </a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{% if filtered_client %}7{% else %}8{% endif %}"
+                        class="text-center py-4 text-muted">
+                        <i class="bi bi-receipt fs-1"></i>
+                        <p class="mt-2">Nu sunt documente</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}{{ '&search=' + search_query if search_query }}{{ '&invoice_type=' + type_filter if type_filter }}{{ '&status=' + status_filter if status_filter }}{{ '&client_id=' + client_filter|string if client_filter }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}{{ '&search=' + search_query if search_query }}{{ '&invoice_type=' + type_filter if type_filter }}{{ '&status=' + status_filter if status_filter }}{{ '&client_id=' + client_filter|string if client_filter }}">{{ p }}</a>
+                    </li>
+                    {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}{{ '&search=' + search_query if search_query }}{{ '&invoice_type=' + type_filter if type_filter }}{{ '&status=' + status_filter if status_filter }}{{ '&client_id=' + client_filter|string if client_filter }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Send Modal -->
+<div class="modal fade" id="sendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="sendForm">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-send text-info"></i> Trimite Document
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Selectați metoda de trimitere:</p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="method"
+                               id="methodEmail" value="email" checked>
+                        <label class="form-check-label" for="methodEmail">
+                            <i class="bi bi-envelope"></i> Email
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="method"
+                               id="methodTelegram" value="telegram">
+                        <label class="form-check-label" for="methodTelegram">
+                            <i class="bi bi-telegram"></i> Telegram
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="method"
+                               id="methodBoth" value="both">
+                        <label class="form-check-label" for="methodBoth">
+                            <i class="bi bi-send-check"></i> Ambele
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send"></i> Trimite
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="cancelForm">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle text-warning"></i> Anulare Factură
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Atenție!</strong> Anularea unei facturi este o operațiune ireversibilă.
+                        Factura va rămâne în sistem dar va fi marcată ca anulată.
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label">Motiv anulare <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cancelReason" name="reason"
+                                  rows="3" required
+                                  placeholder="Explicați motivul anulării facturii..."></textarea>
+                        <div class="form-text">Acest motiv va fi salvat în sistem pentru audit.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Renunță
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-x-circle"></i> Anulează Factura
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Fix pentru dropdown în tabel */
+.dropdown-menu {
+    position: absolute !important;
+    z-index: 1050;
+}
+
+/* Asigură-te că dropdown-ul nu este tăiat de container */
+.card-body {
+    overflow: visible !important;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+/* Pentru mobile, face dropdown să se deschidă în sus dacă e prea jos */
+@media (max-width: 768px) {
+    .dropdown-menu {
+        position: fixed !important;
+        max-width: 200px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showSendModal(invoiceId) {
+    const modal = new bootstrap.Modal(document.getElementById('sendModal'));
+    document.getElementById('sendForm').action = `{{ dashboard_prefix }}/invoice/${invoiceId}/send`;
+    modal.show();
+}
+
+function showCancelModal(invoiceId) {
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    document.getElementById('cancelForm').action = `{{ dashboard_prefix }}/invoice/${invoiceId}/cancel`;
+    // Reset form
+    document.getElementById('cancelReason').value = '';
+    modal.show();
+}
+
+// Verifică poziția dropdown-urilor pentru a le deschide în sus dacă sunt prea jos
+document.addEventListener('DOMContentLoaded', function() {
+    const dropdowns = document.querySelectorAll('.dropdown-toggle');
+
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener('click', function(e) {
+            setTimeout(() => {
+                const menu = this.nextElementSibling;
+                if (menu && menu.classList.contains('dropdown-menu')) {
+                    const rect = menu.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+
+                    if (rect.bottom > viewportHeight) {
+                        menu.style.top = 'auto';
+                        menu.style.bottom = '100%';
+                    }
+                }
+            }, 10);
+        });
+    });
+});
+</script>
+{% endblock %}

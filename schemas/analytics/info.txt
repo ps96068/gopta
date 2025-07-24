@@ -1,0 +1,51 @@
+Pentru UserActivity:
+
+UserActivityStart - start sesiune cu device info
+UserActivityEnd - închidere cu motiv
+UserActivityResponse - durată calculată și formatată
+ActiveSessionsResponse - monitoring real-time
+UserActivityStats - metrici complete engagement
+
+Pentru UserInteraction:
+
+UserInteractionCreate - tracking individual
+UserInteractionBulkCreate - tracking în batch
+InteractionHeatmap - vizualizare pattern-uri orare
+UserPath - analiza journey complet
+InteractionFunnel - conversion funnel analysis
+ProductInteractionStats - metrici per produs
+
+Features importante:
+
+Calcul automat durată sesiune (format human-readable)
+Parse user agent pentru device info
+Time since calculation ("acum", "5 minute", "2 ore")
+Heatmap pentru identificare ore de vârf
+Path analysis pentru optimizare UX
+Funnel pentru conversion rate optimization
+
+========================
+
+Pentru UserRequest:
+
+UserRequestCreate - validare referințe bazat pe tip
+UserRequestQuickCreate - creare rapidă cu template-uri
+UserRequestResponse - include prioritate calculată automat
+UserRequestFilter - filtrare avansată
+Prioritizare automată (urgent după 3 zile, high pentru PRO/INSTALATOR)
+
+Pentru RequestResponse:
+
+RequestResponseCreate - cu notificare automată
+RequestResponseQuickCreate - template-uri predefinite
+RequestWithResponses - view conversație completă
+ResponseTemplate - template-uri reutilizabile
+StaffResponseStats - performanță staff
+
+Features importante:
+
+Calcul automat prioritate bazat pe timp și client status
+Template-uri pentru răspunsuri frecvente
+Conversație thread pentru istoric complet
+Statistici response time per staff
+Notificare automată client

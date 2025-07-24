@@ -1,0 +1,426 @@
+<!-- server/dashboard/templates/user_request/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Cerere #{{ user_request.id }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}
+Cerere #{{ user_request.id }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/user_request" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    <form method="post" action="{{ dashboard_prefix }}/user_request/{{ user_request.id }}/toggle-processed"
+          style="display: inline;">
+        {{ csrf_input|safe }}
+        <button type="submit" class="btn btn-sm btn-{{ 'warning' if user_request.is_processed else 'success' }}">
+            <i class="bi bi-{{ 'arrow-counterclockwise' if user_request.is_processed else 'check-circle' }}"></i>
+            {% if user_request.is_processed %}Redeschide{% else %}Marchează procesată{% endif %}
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Cards Row -->
+<div class="row g-3 mb-4">
+    <!-- Status Card -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Status</h6>
+                        <h3 class="mb-0">
+                            {% if user_request.is_processed %}
+                            <span class="text-success">Procesată</span>
+                            {% else %}
+                            <span class="text-warning">În așteptare</span>
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="opacity-25">
+                        <i class="bi bi-{{ 'check-circle text-success' if user_request.is_processed else 'clock text-warning' }}"
+                           style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                {% if user_request.is_processed %}
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">Procesată la:</small>
+                    <br>
+                    <strong>{{ user_request.processed_at|datetime_local }}</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Type Card -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Tip Cerere</h6>
+                        <h3 class="mb-0 text-primary">{{ user_request.request_type.value|title }}</h3>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-tag" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">Creată la:</small>
+                    <br>
+                    <strong>{{ user_request.created_at|datetime_local }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Responses Card -->
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Răspunsuri</h6>
+                        <h3 class="mb-0 text-info">{{ user_request.responses|length }}</h3>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-chat-dots" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-top">
+                    {% if user_request.responses %}
+                    <small class="text-muted">Ultimul răspuns:</small>
+                    <br>
+                    <strong>{{ user_request.responses[-1].created_at|time_only }}</strong>
+                    {% else %}
+                    <span class="text-muted">Fără răspuns încă</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-4">
+    <!-- Left Column - Conversation -->
+    <div class="col-lg-8">
+        <!-- Request Details -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle text-primary me-2"></i>
+                    Detalii Cerere
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="request-message-box">
+                    <div class="d-flex align-items-start">
+                        <div class="avatar-circle bg-primary text-white flex-shrink-0">
+                            {{ (user_request.client.first_name or 'C')[0] }}
+                        </div>
+                        <div class="ms-3 flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-0">{{ user_request.client.first_name or 'Client' }} {{ user_request.client.last_name or '' }}</h6>
+                                    <small class="text-muted">{{ user_request.created_at|datetime_local }}</small>
+                                </div>
+                                <span class="badge bg-{{ 'primary' if user_request.request_type.value == 'product' else 'success' if user_request.request_type.value == 'order' else 'secondary' }}">
+                                    {{ user_request.request_type.value }}
+                                </span>
+                            </div>
+                            <p class="mb-0">{{ user_request.message }}</p>
+
+                            {% if user_request.product %}
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <small class="text-muted d-block mb-1">Produs asociat:</small>
+                                <a href="{{ dashboard_prefix }}/product/{{ user_request.product.id }}"
+                                   class="text-decoration-none">
+                                    <i class="bi bi-box"></i> {{ user_request.product.name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">SKU: {{ user_request.product.sku }}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversation -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-left-dots text-primary me-2"></i>
+                        Conversație
+                    </h5>
+                    <span class="badge bg-secondary">{{ user_request.responses|length }} răspunsuri</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="conversation-list">
+                    {% if user_request.responses %}
+                        {% for response in user_request.responses %}
+                        <div class="conversation-item p-3">
+                            <div class="d-flex align-items-start">
+                                <div class="avatar-circle bg-info text-white flex-shrink-0">
+                                    <i class="bi bi-person-badge"></i>
+                                </div>
+                                <div class="ms-3 flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="mb-0">
+                                                {{ response.staff.first_name }} {{ response.staff.last_name }}
+                                                <span class="badge bg-info ms-2">Staff</span>
+                                            </h6>
+                                            <small class="text-muted">{{ response.created_at|datetime_local }}</small>
+                                        </div>
+                                        {% if response.sent_via %}
+                                        <small class="text-muted">
+                                            <i class="bi bi-send"></i> {{ response.sent_via }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-0">{{ response.message }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-chat-left-dots fs-1"></i>
+                        <p class="mt-2 mb-0">Nu există răspunsuri încă</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reply Form -->
+            {% if not user_request.is_processed or is_super_admin %}
+            <div class="card-footer bg-light">
+                <form method="post" action="{{ dashboard_prefix }}/user_request/{{ user_request.id }}/respond">
+                    {{ csrf_input|safe }}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-reply"></i> Adaugă Răspuns
+                        </label>
+                        <textarea name="message" class="form-control" rows="3" required
+                                  placeholder="Scrieți răspunsul dvs. aici..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Canal comunicare</label>
+                            <select name="sent_via" class="form-select">
+                                <option value="telegram">
+                                    <i class="bi bi-telegram"></i> Telegram
+                                </option>
+                                <option value="email">
+                                    <i class="bi bi-envelope"></i> Email
+                                </option>
+                                <option value="phone">
+                                    <i class="bi bi-telephone"></i> Telefon
+                                </option>
+                                <option value="internal">
+                                    <i class="bi bi-house"></i> Doar intern
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <div class="w-100">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-send"></i> Trimite Răspuns
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column - Client Info & Actions -->
+    <div class="col-lg-4">
+        <!-- Client Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-primary me-2"></i>
+                    Informații Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-circle bg-primary text-white mx-auto mb-3" style="width: 80px; height: 80px; font-size: 24px;">
+                        {{ (user_request.client.first_name or 'C')[0] }}{{ (user_request.client.last_name or '')[0] }}
+                    </div>
+                    <h6>{{ user_request.client.first_name or 'Client' }} {{ user_request.client.last_name or '' }}</h6>
+                    <span class="badge bg-{{ user_request.client.status.value|lower }}">
+                        {{ user_request.client.status.value }}
+                    </span>
+                </div>
+
+                <dl class="row small">
+                    {% if user_request.client.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">
+                        <a href="tel:{{ user_request.client.phone }}">{{ user_request.client.phone }}</a>
+                    </dd>
+                    {% endif %}
+
+                    {% if user_request.client.email %}
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7 text-truncate">
+                        <a href="mailto:{{ user_request.client.email }}" title="{{ user_request.client.email }}">
+                            {{ user_request.client.email }}
+                        </a>
+                    </dd>
+                    {% endif %}
+
+                    <dt class="col-5">Telegram ID:</dt>
+                    <dd class="col-7">{{ user_request.client.telegram_id }}</dd>
+
+                    {% if user_request.client.username %}
+                    <dt class="col-5">Username:</dt>
+                    <dd class="col-7">@{{ user_request.client.username }}</dd>
+                    {% endif %}
+
+                    <dt class="col-5">Client din:</dt>
+                    <dd class="col-7">{{ user_request.client.created_at|date_only }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning-charge text-warning me-2"></i>
+                    Acțiuni Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ dashboard_prefix }}/client/{{ user_request.client.id }}"
+                       class="btn btn-light">
+                        <i class="bi bi-person text-primary"></i> Vezi profil client
+                    </a>
+
+                    <a href="{{ dashboard_prefix }}/order?client_id={{ user_request.client.id }}"
+                       class="btn btn-light">
+                        <i class="bi bi-cart text-success"></i> Vezi comenzi client
+                    </a>
+
+                    {% if user_request.product %}
+                    <hr class="my-2">
+                    <a href="{{ dashboard_prefix }}/product/{{ user_request.product.id }}/edit"
+                       class="btn btn-light">
+                        <i class="bi bi-pencil text-info"></i> Editează produs
+                    </a>
+                    {% endif %}
+
+                    <hr class="my-2">
+
+                    <button class="btn btn-light" onclick="window.print()">
+                        <i class="bi bi-printer text-secondary"></i> Print conversație
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Avatar Circle */
+.avatar-circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Request Message Box */
+.request-message-box {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+
+/* Conversation Styles */
+.conversation-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.conversation-item {
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.conversation-item:last-child {
+    border-bottom: none;
+}
+
+.conversation-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Smooth scrollbar */
+.conversation-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.conversation-list::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+/* Print Styles */
+@media print {
+    .col-lg-4,
+    .card-footer {
+        display: none !important;
+    }
+
+    .col-lg-8 {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Focus pe textarea când se deschide pagina
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.querySelector('textarea[name="message"]');
+    if (textarea) {
+        textarea.focus();
+    }
+});
+
+// Auto-refresh dacă cererea nu e procesată
+{% if not user_request.is_processed %}
+setInterval(() => {
+    fetch(`/dashboard/staff/home/api/notifications`)
+        .then(r => r.json())
+        .then(data => {
+            // Check for new responses
+        });
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}

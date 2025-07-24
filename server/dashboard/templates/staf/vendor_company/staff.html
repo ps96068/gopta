@@ -1,0 +1,123 @@
+<!-- templates/dashboard/staff/vendor_company/staff.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Angajați {{ company.name }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">Angajați {{ company.name }}</h2>
+                <div class="d-flex gap-2">
+                    {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                    <a href="/dashboard/staff/vendor_staff/create?company_id={{ company.id }}" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-2"></i>Adaugă Angajat
+                    </a>
+                    {% endif %}
+                    <a href="/dashboard/staff/vendor_company/{{ company.id }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Înapoi la Companie
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if staff_members %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nume</th>
+                                    <th>Email</th>
+                                    <th>Telefon</th>
+                                    <th>Rol</th>
+                                    <th>Ultima Autentificare</th>
+                                    <th>Status</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for staff in staff_members %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ staff.first_name }} {{ staff.last_name }}</strong>
+                                    </td>
+                                    <td>
+                                        <a href="mailto:{{ staff.email }}">{{ staff.email }}</a>
+                                    </td>
+                                    <td>
+                                        {% if staff.phone %}
+                                            <a href="tel:{{ staff.phone }}">{{ staff.phone }}</a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'primary' if staff.role.value == 'admin' else 'secondary' }}">
+                                            {{ staff.role.value|title }}
+                                        </span>
+                                        {% if staff.role.value == 'admin' %}
+                                            <br><small class="text-muted">Acces complet</small>
+                                        {% else %}
+                                            <br><small class="text-muted">Gestionare produse</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if staff.last_login %}
+                                            {{ staff.last_login.strftime('%d.%m.%Y %H:%M') }}
+                                        {% else %}
+                                            <span class="text-muted">Niciodată</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if staff.is_active %}
+                                            <span class="badge bg-success">Activ</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactiv</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <!-- ACTUALIZAT: Adaugă parametrul from_company pentru navigare corectă -->
+                                        <a href="/dashboard/staff/vendor_staff/{{ staff.id }}?from_company={{ company.id }}"
+                                           class="btn btn-sm btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                                        <a href="/dashboard/staff/vendor_staff/{{ staff.id }}/edit"
+                                           class="btn btn-sm btn-outline-warning" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-info mt-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Notă:</strong> Angajații cu rol de <strong>Admin</strong> pot modifica setările companiei
+                        și gestiona alți angajați. Cei cu rol de <strong>Manager</strong> pot doar adăuga și modifica produse.
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">Această companie nu are angajați înregistrați.</p>
+                        {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                        <a href="/dashboard/staff/vendor_staff/create?company_id={{ company.id }}" class="btn btn-primary mt-3">
+                            <i class="bi bi-person-plus me-2"></i>Adaugă Primul Angajat
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

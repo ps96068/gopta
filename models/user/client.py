@@ -1,70 +1,53 @@
+# models/user/client.py
+"""
+Client model pentru utilizatorii WebApp.
+
+Clienții se autentifică exclusiv prin Telegram ID și pot face achiziții
+atât pentru uz personal (B2C) cât și pentru compania la care lucrează (B2B).
+
+Price Type Logic:
+- anonim: Client nou, fără date suplimentare
+- user: După completarea datelor (email, telefon, nume)
+- instalator/pro: Setat manual de către Staff
+- Auto-upgrade la 'pro' dacă telegram_id aparține unui Staff
+"""
+
 from __future__ import annotations
-
-import re
-import enum
-from datetime import datetime
-from starlette.requests import Request
-from sqlalchemy import Index, String, Boolean, Enum, DateTime, ForeignKey, Integer, CheckConstraint
-from sqlalchemy.orm import relationship, validates, Mapped, mapped_column, Relationship
-from sqlalchemy.sql import func
+from typing import Optional, List, TYPE_CHECKING
 
 
+from sqlalchemy import String, Integer, ForeignKey, Boolean, DateTime, Enum, Index, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
-from cfg import Base
-from ..base import CreatedAtMixin, IsActiveMixin
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
+from models.enum.client import UserStatus
 
-# models/user/clients.py
-
-class ClientStatus(enum.Enum):
-    anonim = "anonim"
-    user = "user"
-    instalator = "instalator"
-    pro = "pro"
+if TYPE_CHECKING:
+    from models import Cart, Order, UserRequest, UserActivity, UserInteraction, Notification
 
 
-
-class Client(Base, CreatedAtMixin, IsActiveMixin):
+class Client(Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin):
+    """Model pentru clienții din Telegram."""
     __tablename__ = "clients"
-    __table_args__ = (
-        Index("ix_client_status_active", "status", "is_active"),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    telegram_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    username: Mapped[str | None] = mapped_column(String, unique=False, index=True, nullable=True)
-    phone_number: Mapped[str | None] = mapped_column(String(15), nullable=True)
-    email: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
-    status: Mapped[ClientStatus] = mapped_column(Enum(ClientStatus), nullable=False, default=ClientStatus.anonim)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False, index=True)
+    status: Mapped[UserStatus] = mapped_column(Enum(UserStatus), default=UserStatus.ANONIM, nullable=False)
 
-    # create_date: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    last_visit: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
+    # Date personale (completate când devine USER)
+    first_name: Mapped[Optional[str]] = mapped_column(String(100))
+    last_name: Mapped[Optional[str]] = mapped_column(String(100))
+    phone: Mapped[Optional[str]] = mapped_column(String(20))
+    email: Mapped[Optional[str]] = mapped_column(String(255))
 
-    # Relatii
-    activities: Mapped[list["UserActivity"]] = relationship("UserActivity", back_populates="client")
-    interactions: Mapped[list["UserInteraction"]] = relationship("UserInteraction", back_populates="client")
-    requests: Mapped[list["UserRequest"]] = relationship("UserRequest", back_populates="client")
-    orders: Mapped[list["Order"]] = relationship("Order", back_populates="client")
+    # Telegram data
+    username: Mapped[Optional[str]] = mapped_column(String(100))
+    language_code: Mapped[Optional[str]] = mapped_column(String(10), default="ro")
 
-
-    @validates('phone_number')
-    def validate_phone(self, key, number: str | None):
-        if number and not re.match(r"^\+?[0-9]{7,15}$", number):
-            raise ValueError("Numărul de telefon are un format invalid")
-        return number
-
-    @validates('email')
-    def validate_email(self, key, email):
-        if email is None:
-            return None
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            raise ValueError("Adresa de email este invalidă")
-        return email
-
-    def __repr__(self):
-        return f"<Client(id={self.id}, username='{self.username}', telegram_id='{self.telegram_id}', status='{self.status.value}')>"
-
-    def __str__(self):
-        return f"{self.id}_{self.username}-({self.status})"
-
-
-
+    # Relationships
+    carts: Mapped[List["Cart"]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    orders: Mapped[List["Order"]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    requests: Mapped[List["UserRequest"]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    activities: Mapped[List["UserActivity"]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    interactions: Mapped[List["UserInteraction"]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    notifications: Mapped[List["Notification"]] = relationship(back_populates="client", cascade="all, delete-orphan")

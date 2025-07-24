@@ -1,0 +1,740 @@
+<!-- server/dashboard/templates/cart/manage.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Listă Coșuri
+    </a>
+    {% if not is_new_cart %}
+    <a href="{{ dashboard_prefix }}/cart/{{ cart.id }}" class="btn btn-sm btn-info">
+        <i class="bi bi-eye"></i> Vezi Detalii
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-success">
+        <i class="bi bi-check-circle"></i> Salvează și Închide
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Alert for old cart -->
+{% if days_old > 7 %}
+<div class="alert alert-warning alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    <strong>Atenție!</strong> Acest coș nu a fost actualizat de {{ days_old }} zile.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('info') == 'existing_cart' %}
+<div class="alert alert-info alert-dismissible fade show">
+    <i class="bi bi-info-circle me-2"></i>
+    Clientul are deja un coș activ recent. Puteți continua să adăugați produse aici.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Left: Product Selection -->
+    <div class="col-lg-7">
+        <!-- Filters -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <form method="get" action="{{ dashboard_prefix }}/cart/manage/{{ 'new' if is_new_cart else cart.id }}" class="row g-3">
+                    {% if is_new_cart %}
+                    <input type="hidden" name="client_id" value="{{ client_id }}">
+                    {% endif %}
+                    <div class="col-md-5">
+                        <input type="search" name="search" class="form-control"
+                               placeholder="Caută produs..." value="{{ search_query or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <select name="category_id" class="form-select">
+                            <option value="">Toate categoriile</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Filtrează
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    Produse Disponibile
+                </h5>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                <div class="row g-3">
+                    {% for product in products %}
+                    <div class="col-md-6">
+                        <div class="card h-100 product-card">
+                            <div class="card-body">
+                                <h6 class="card-title mb-1">{{ product.name }}</h6>
+                                <p class="text-muted small mb-2">
+                                    SKU: {{ product.sku }} | {{ product.category.name }}
+                                </p>
+                                <div class="mb-3">
+                                    {% for price in product.prices %}
+                                        {% if price.price_type.value == cart.client.status.value %}
+                                        <div class="h5 mb-0 text-success">
+                                            {{ price.amount|int }} MDL
+                                        </div>
+                                        <small class="text-muted">Preț {{ price.price_type.value }}</small>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" value="1" min="1" max="999"
+                                           class="form-control form-control-sm me-2"
+                                           id="qty-{{ product.id }}"
+                                           style="width: 70px;">
+                                    <button class="btn btn-sm btn-primary flex-grow-1"
+                                            onclick="addToCart({{ product.id }})">
+                                        <i class="bi bi-cart-plus"></i> Adaugă
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1"></i>
+                        <p class="mt-2">Nu s-au găsit produse</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Cart Details -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart text-success me-2"></i>
+                        Coș {% if not is_new_cart %}#{{ cart.id }}{% else %}Nou{% endif %}
+                    </h5>
+                    <span class="badge bg-info" id="itemsCount">{{ cart.items|length }} produse</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Client Info -->
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-circle bg-{{ cart.client.status.value|lower }} text-white me-3"
+                             style="width: 40px; height: 40px;">
+                            {{ (cart.client.first_name or 'A')[0] }}
+                        </div>
+                        <div>
+                            <strong>{{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</strong><br>
+                            <span class="badge bg-{{ cart.client.status.value|lower }}">
+                                {{ cart.client.status.value }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cart Items -->
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm" id="cartItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Produs</th>
+                                <th width="80" class="text-center">Cant.</th>
+                                <th width="80" class="text-end">Preț</th>
+                                <th width="90" class="text-end">Subtotal</th>
+                                <th width="40"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartItems">
+                            {% if cart.items %}
+                                {% for item in cart.items %}
+                                <tr data-item-id="{{ item.id }}">
+                                    <td>
+                                        <div>
+                                            <strong>{{ item.product.name }}</strong><br>
+                                            <small class="text-muted">SKU: {{ item.product.sku }}</small>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number" value="{{ item.quantity }}" min="1" max="999"
+                                               class="form-control form-control-sm text-center item-quantity"
+                                               style="width: 70px;" data-item-id="{{ item.id }}">
+                                    </td>
+                                    <td class="text-end">
+                                        {{ item.price_snapshot|int }} MDL<br>
+                                        <small class="text-muted">{{ item.price_type }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="item-subtotal">{{ (item.quantity * item.price_snapshot)|int }} MDL</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                onclick="removeItem({{ item.id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr id="emptyCart">
+                                    <td colspan="5" class="text-center text-muted py-3">
+                                        Coșul este gol. Adăugați produse din lista din stânga.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <hr>
+
+                <!-- Total -->
+                <div class="d-flex justify-content-between mb-3">
+                    <h5>Total:</h5>
+                    <h5 class="text-success" id="cartTotal">{{ cart_total|int }} MDL</h5>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-grid gap-2">
+                    {% if cart.items %}
+                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/convert-to-order">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-success w-100" id="convertBtn">
+                            <i class="bi bi-cart-check"></i> Convertește în Comandă
+                        </button>
+                    </form>
+
+                    <a href="{{ dashboard_prefix }}/cart" class="btn btn-primary w-100" id="saveBtn">
+                        <i class="bi bi-check-circle"></i> Salvează și Închide
+                    </a>
+                    {% else %}
+                    <a href="{{ dashboard_prefix }}/cart" class="btn btn-primary w-100" id="backBtn">
+                        <i class="bi bi-arrow-left"></i> Înapoi la Lista Coșurilor
+                    </a>
+                    {% endif %}
+
+                    {% if not is_new_cart and cart.items %}
+                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/clear"
+                          onsubmit="return confirm('Sigur doriți să ștergeți acest coș? Această acțiune va șterge coșul complet din sistem!');">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-danger w-100" id="deleteBtn">
+                            <i class="bi bi-trash"></i> Șterge Coșul
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden fields for JavaScript -->
+<input type="hidden" id="currentCartId" value="{{ 'new' if is_new_cart else cart.id }}">
+<input type="hidden" id="clientId" value="{{ client_id }}">
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.product-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.product-card:hover {
+    border-color: #e9ecef;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.product-card.success-flash {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.3);
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+#cartItemsTable tbody tr {
+    transition: all 0.3s ease;
+}
+
+.highlight-new {
+    animation: highlightPulse 1s ease-out;
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: #d1f2eb;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+
+// let currentCartId = document.getElementById('currentCartId').value;
+// const clientId = document.getElementById('clientId').value;
+//
+// // Add product to cart
+// async function addToCart(productId) {
+//     const quantity = document.getElementById(`qty-${productId}`).value;
+//     const button = event.target.closest('button');
+//
+//     // Disable button
+//     button.disabled = true;
+//     button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+//
+//     try {
+//         const formData = new FormData();
+//         formData.append('cart_id', currentCartId);
+//         formData.append('product_id', productId);
+//         formData.append('quantity', quantity);
+//
+//         if (currentCartId === 'new') {
+//             formData.append('client_id', clientId);
+//         }
+//
+//         const response = await fetch('/dashboard/cart/add-product-ajax', {
+//             method: 'POST',
+//             body: formData
+//         });
+//
+//         const data = await response.json();
+//
+//         if (data.success) {
+//             // Actualizează cart ID dacă era nou
+//             if (currentCartId === 'new' && data.cart_id) {
+//                 currentCartId = data.cart_id;
+//                 document.getElementById('currentCartId').value = data.cart_id;
+//
+//                 // Actualizează URL fără reîncărcare
+//                 const newUrl = `/dashboard/cart/manage/${data.cart_id}`;
+//                 window.history.replaceState(null, '', newUrl);
+//
+//                 // Actualizează header
+//                 document.querySelector('.card-header h5').innerHTML =
+//                     `<i class="bi bi-cart text-success me-2"></i> Coș #${data.cart_id}`;
+//             }
+//
+//             // Update cart display
+//             updateCartDisplay(data);
+//
+//             // Flash success on product card
+//             const productCard = button.closest('.product-card');
+//             productCard.classList.add('success-flash');
+//             setTimeout(() => {
+//                 productCard.classList.remove('success-flash');
+//             }, 1000);
+//
+//             // Reset quantity
+//             document.getElementById(`qty-${productId}`).value = 1;
+//
+//             // Show toast
+//             showToast('success', `${data.product_name} adăugat în coș`);
+//         } else {
+//             showToast('danger', data.error || 'Eroare la adăugare');
+//         }
+//     } catch (error) {
+//         showToast('danger', 'Eroare de comunicare');
+//     } finally {
+//         // Restore button
+//         button.disabled = false;
+//         button.innerHTML = '<i class="bi bi-cart-plus"></i> Adaugă';
+//     }
+// }
+//
+// async function removeItem(itemId) {
+//     if (!confirm('Eliminați acest produs din coș?')) return;
+//
+//     try {
+//         const formData = new FormData();
+//         formData.append('item_id', itemId);
+//
+//         const response = await fetch('/dashboard/cart/remove-item-ajax', {
+//             method: 'POST',
+//             body: formData
+//         });
+//
+//         const data = await response.json();
+//
+//         if (data.success) {
+//             if (data.cart_deleted) {
+//                 // Coșul a fost șters complet
+//                 showToast('info', 'Coșul a fost șters deoarece nu mai avea produse');
+//                 setTimeout(() => {
+//                     window.location.href = data.redirect;
+//                 }, 1500);
+//                 return;
+//             }
+//
+//             updateCartDisplay(data);
+//
+//             // Remove row with animation
+//             const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+//             row.style.opacity = '0';
+//             setTimeout(() => {
+//                 row.remove();
+//
+//                 // Update totals
+//                 document.getElementById('cartTotal').textContent = `${Math.round(data.cart_total)} MDL`;
+//                 document.getElementById('itemsCount').textContent = `${data.items_count} produse`;
+//
+//                 // Check if cart is empty
+//                 const tbody = document.getElementById('cartItems');
+//                 if (tbody.children.length === 0) {
+//                     tbody.innerHTML = '<tr id="emptyCart"><td colspan="5" class="text-center text-muted py-3">Coșul este gol. Adăugați produse din lista din stânga.</td></tr>';
+//
+//                     // Update buttons
+//                     document.getElementById('convertBtn')?.style.display = 'none';
+//                     document.getElementById('saveBtn')?.innerHTML = '<i class="bi bi-arrow-left"></i> Înapoi la Lista Coșurilor';
+//                     document.getElementById('deleteBtn')?.style.display = 'none';
+//                 }
+//             }, 300);
+//
+//             showToast('success', 'Produs eliminat din coș');
+//         } else {
+//             showToast('danger', data.error || 'Eroare la eliminare');
+//         }
+//     } catch (error) {
+//         showToast('danger', 'Eroare de comunicare');
+//     }
+// }
+//
+// function updateCartDisplay(data) {
+//     // Remove empty cart message
+//     const emptyMsg = document.getElementById('emptyCart');
+//     if (emptyMsg) emptyMsg.remove();
+//
+//     // Update cart items
+//     document.getElementById('cartItems').innerHTML = data.cart_items_html;
+//
+//     // Update total
+//     document.getElementById('cartTotal').textContent = `${Math.round(data.cart_total)} MDL`;
+//
+//     // Update count
+//     document.getElementById('itemsCount').textContent = `${data.items_count} produse`;
+//
+//     // Show/update buttons
+//     if (!document.getElementById('convertBtn')) {
+//         // Recreate buttons
+//         const actionsDiv = document.querySelector('.d-grid.gap-2');
+//         actionsDiv.innerHTML = `
+//             <form method="post" action="/dashboard/cart/${currentCartId}/convert-to-order">
+//                 <button type="submit" class="btn btn-success w-100" id="convertBtn">
+//                     <i class="bi bi-cart-check"></i> Convertește în Comandă
+//                 </button>
+//             </form>
+//
+//             <a href="/dashboard/cart" class="btn btn-primary w-100" id="saveBtn">
+//                 <i class="bi bi-check-circle"></i> Salvează și Închide
+//             </a>
+//
+//             ${currentCartId !== 'new' ? `
+//             <form method="post" action="/dashboard/cart/${currentCartId}/clear"
+//                   onsubmit="return confirm('Sigur doriți să ștergeți acest coș?');">
+//                 <button type="submit" class="btn btn-danger w-100" id="deleteBtn">
+//                     <i class="bi bi-trash"></i> Șterge Coșul
+//                 </button>
+//             </form>
+//             ` : ''}
+//         `;
+//     }
+//
+//     // Add quantity change listeners
+//     attachQuantityListeners();
+// }
+//
+// function attachQuantityListeners() {
+//     document.querySelectorAll('.item-quantity').forEach(input => {
+//         input.addEventListener('change', async function() {
+//             const itemId = this.dataset.itemId;
+//             const quantity = this.value;
+//
+//             try {
+//                 const response = await fetch('/dashboard/cart/update-item-ajax', {
+//                     method: 'POST',
+//                     headers: {
+//                         'Content-Type': 'application/x-www-form-urlencoded',
+//                     },
+//                     body: `item_id=${itemId}&quantity=${quantity}`
+//                 });
+//
+//                 const data = await response.json();
+//
+//                 if (data.success) {
+//                     // Update subtotal
+//                     const row = this.closest('tr');
+//                     row.querySelector('.item-subtotal').textContent = `${Math.round(data.item_subtotal)} MDL`;
+//
+//                     // Update total
+//                     document.getElementById('cartTotal').textContent = `${Math.round(data.cart_total)} MDL`;
+//                 }
+//             } catch (error) {
+//                 showToast('danger', 'Eroare la actualizare');
+//             }
+//         });
+//     });
+// }
+//
+// function showToast(type, message) {
+//     const toastHtml = `
+//         <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+//             <div class="d-flex">
+//                 <div class="toast-body">${message}</div>
+//                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+//             </div>
+//         </div>
+//     `;
+//
+//     let container = document.getElementById('toastContainer');
+//     if (!container) {
+//         container = document.createElement('div');
+//         container.id = 'toastContainer';
+//         container.className = 'position-fixed bottom-0 end-0 p-3';
+//         container.style.zIndex = '1050';
+//         document.body.appendChild(container);
+//     }
+//
+//     container.innerHTML = toastHtml;
+//     const toast = new bootstrap.Toast(container.querySelector('.toast'));
+//     toast.show();
+// }
+//
+// // Initialize quantity listeners on load
+// document.addEventListener('DOMContentLoaded', attachQuantityListeners);
+
+</script>
+
+
+<script>
+
+
+    let currentCartId = document.getElementById('currentCartId').value;
+    const clientId = document.getElementById('clientId').value;
+
+    // Add product to cart
+    async function addToCart(productId) {
+
+        const quantity = document.getElementById(`qty-${productId}`).value;
+        const button = event.target.closest('button');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const formData = new FormData();
+            formData.append('cart_id', currentCartId);
+            formData.append('product_id', productId);
+            formData.append('quantity', quantity);
+            if (currentCartId === 'new') {
+                formData.append('client_id', clientId);
+            }
+
+            const response = await fetch('/dashboard/cart/add-product-ajax', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                if (currentCartId === 'new' && data.cart_id) {
+                    currentCartId = data.cart_id;
+                    document.getElementById('currentCartId').value = data.cart_id;
+                    const newUrl = `/dashboard/cart/manage/${data.cart_id}`;
+                    window.history.replaceState(null, '', newUrl);
+                    document.querySelector('.card-header h5').innerHTML =
+                        `<i class="bi bi-cart text-success me-2"></i> Coș #${data.cart_id}`;
+                }
+                updateCartDisplay(data);
+                const productCard = button.closest('.product-card');
+                productCard.classList.add('success-flash');
+                setTimeout(() => productCard.classList.remove('success-flash'), 1000);
+                document.getElementById(`qty-${productId}`).value = 1;
+                showToast('success', `${data.product_name} adăugat în coș`);
+            } else {
+                showToast('danger', data.error || 'Eroare la adăugare');
+            }
+        } catch (error) {
+            showToast('danger', 'Eroare de comunicare');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-cart-plus"></i> Adaugă';
+        }
+    }
+
+    // Remove item from cart
+    async function removeItem(itemId) {
+        if (!confirm('Eliminați acest produs din coș?')) return;
+        try {
+            const formData = new FormData();
+            formData.append('item_id', itemId);
+            const response = await fetch('/dashboard/cart/remove-item-ajax', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            console.log(data);
+
+            if (data.success) {
+                if (data.cart_deleted) {
+                    showToast('info', 'Coșul a fost șters deoarece nu mai avea produse');
+                    setTimeout(() => window.location.href = data.redirect_url, 1500);
+                    return;
+                }
+                updateCartDisplay(data);
+                showToast('success', 'Produs eliminat din coș');
+            } else {
+                showToast('danger', data.error || 'Eroare la eliminare');
+            }
+        } catch (error) {
+            showToast('danger', 'Eroare de comunicare');
+        }
+    }
+
+    // Update cart display after any change
+    function updateCartDisplay(data) {
+        // Update cart items table
+        document.getElementById('cartItems').innerHTML = data.cart_items_html;
+        document.getElementById('cartTotal').textContent = `${Math.round(data.cart_total)} MDL`;
+        document.getElementById('itemsCount').textContent = `${data.items_count} produse`;
+
+        // Update action buttons if needed
+        if (!document.getElementById('convertBtn') && data.items_count > 0) {
+            const actionsDiv = document.querySelector('.d-grid.gap-2');
+            actionsDiv.innerHTML = `
+                <form method="post" action="/dashboard/staff/cart/${currentCartId}/convert-to-order">
+                {{ csrf_input|safe }}
+                    <button type="submit" class="btn btn-success w-100" id="convertBtn">
+                        <i class="bi bi-cart-check"></i> Convertește în Comandă
+                    </button>
+                </form>
+                <a href="/dashboard/staff/cart" class="btn btn-primary w-100" id="saveBtn">
+                    <i class="bi bi-check-circle"></i> Salvează și Închide
+                </a>
+                <form method="post" action="/dashboard/staff/cart/${currentCartId}/clear"
+                      onsubmit="return confirm('Sigur doriți să ștergeți acest coș?');">
+                      {{ csrf_input|safe }}
+                    <button type="submit" class="btn btn-danger w-100" id="deleteBtn">
+                        <i class="bi bi-trash"></i> Șterge Coșul
+                    </button>
+                </form>
+            `;
+        }
+        attachQuantityListeners();
+        attachRemoveListeners();
+    }
+
+    // Attach listeners for quantity changes
+    function attachQuantityListeners() {
+        document.querySelectorAll('.item-quantity').forEach(input => {
+            input.onchange = async function() {
+                const itemId = this.dataset.itemId;
+                const quantity = this.value;
+                try {
+                    const response = await fetch('/dashboard/cart/update-item-ajax', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `item_id=${itemId}&quantity=${quantity}`
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        const row = this.closest('tr');
+                        row.querySelector('.item-subtotal').textContent = `${Math.round(data.item_subtotal)} MDL`;
+                        document.getElementById('cartTotal').textContent = `${Math.round(data.cart_total)} MDL`;
+                        document.getElementById('itemsCount').textContent = `${data.items_count} produse`;
+                    } else {
+                        showToast('danger', data.error || 'Eroare la actualizare');
+                    }
+                } catch (error) {
+                    showToast('danger', 'Eroare la actualizare');
+                }
+            };
+        });
+    }
+
+    // Attach listeners for remove buttons
+    function attachRemoveListeners() {
+        document.querySelectorAll('button[onclick^="removeItem"]').forEach(btn => {
+            btn.onclick = function() {
+                const itemId = this.closest('tr').dataset.itemId;
+                removeItem(itemId);
+            };
+        });
+    }
+
+    // Show toast message
+    function showToast(type, message) {
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'position-fixed bottom-0 end-0 p-3';
+            container.style.zIndex = '1050';
+            document.body.appendChild(container);
+        }
+        container.innerHTML = toastHtml;
+        const toast = new bootstrap.Toast(container.querySelector('.toast'));
+        toast.show();
+    }
+
+    // Initial listeners on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        attachQuantityListeners();
+        attachRemoveListeners();
+            const categorySelect = document.querySelector('select[name="category_id"]');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function() {
+                this.form.submit();
+            });
+        }
+    });
+
+</script>
+
+
+
+{% endblock %}

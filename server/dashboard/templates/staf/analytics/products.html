@@ -1,0 +1,224 @@
+<!-- server/dashboard/templates/staf/analytics/products.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Analiză Produse - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Analiză Produse{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group me-2">
+    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-funnel"></i>
+        {% if current_category %}Categorie selectată{% else %}Toate categoriile{% endif %}
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="?days={{ current_period }}">Toate categoriile</a></li>
+        <li><hr class="dropdown-divider"></li>
+        {% for category in categories %}
+        <li>
+            <a class="dropdown-item {% if current_category == category.id %}active{% endif %}"
+               href="?days={{ current_period }}&category_id={{ category.id }}">
+                {{ category.name }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-calendar"></i> {{ current_period }} zile
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="?days=7{% if current_category %}&category_id={{ current_category }}{% endif %}">Ultima săptămână</a></li>
+        <li><a class="dropdown-item" href="?days=30{% if current_category %}&category_id={{ current_category }}{% endif %}">Ultima lună</a></li>
+        <li><a class="dropdown-item" href="?days=90{% if current_category %}&category_id={{ current_category }}{% endif %}">Ultimele 3 luni</a></li>
+    </ul>
+</div>
+
+<a href="{{ url_for('export_analytics') }}?report_type=products&days={{ current_period }}" class="btn btn-sm btn-success">
+    <i class="bi bi-download"></i> Export
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-products">
+    <!-- Summary Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ products_analytics|length }}</h3>
+                    <small class="text-muted">Produse analizate</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ products_analytics|map(attribute='views')|sum }}</h3>
+                    <small class="text-muted">Total vizualizări</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ products_analytics|map(attribute='add_to_cart')|sum }}</h3>
+                    <small class="text-muted">Adăugări în coș</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">{{ products_analytics|map(attribute='requests')|sum }}</h3>
+                    <small class="text-muted">Cereri ofertă</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Performance Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Performanță Produse</h5>
+            <small class="text-muted">Top {{ products_analytics|length }} produse</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produs</th>
+                            <th>SKU</th>
+                            <th class="text-center">Vizualizări</th>
+                            <th class="text-center">În coș</th>
+                            <th class="text-center">Conv. Rate</th>
+                            <th class="text-center">Cereri</th>
+                            <th class="text-center">Request Rate</th>
+                            <th class="text-center">Performanță</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analytics in products_analytics %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('products_detail', id=analytics.product.id) }}"
+                                   class="text-decoration-none">
+                                    {{ analytics.product.name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">
+                                    {{ analytics.product.category.name if analytics.product.category else 'N/A' }}
+                                </small>
+                            </td>
+                            <td>
+                                <code>{{ analytics.product.sku }}</code>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ analytics.views }}</strong>
+                            </td>
+                            <td class="text-center">
+                                {{ analytics.add_to_cart }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{{
+                                    'success' if analytics.conversion_rate > 20 else
+                                    'warning' if analytics.conversion_rate > 10 else
+                                    'secondary'
+                                }}">
+                                    {{ analytics.conversion_rate }}%
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {{ analytics.requests }}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">
+                                    {{ analytics.request_rate }}%
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <!-- Performance Score -->
+                                {% set score = (analytics.views * 0.3 + analytics.add_to_cart * 5 + analytics.requests * 10) %}
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar
+                                        {% if score > 100 %}bg-success
+                                        {% elif score > 50 %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                        role="progressbar"
+                                        style="width: {{ [score, 100]|min }}%">
+                                        {{ score|round|int }}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i>
+                Performance Score = (Views × 0.3) + (Cart × 5) + (Requests × 10)
+            </small>
+        </div>
+    </div>
+
+    <!-- Insights -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0">
+                        <i class="bi bi-trophy text-success"></i> Top Performeri
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        {% for analytics in products_analytics[:5] %}
+                        <li class="mb-2">
+                            <strong>{{ analytics.product.name }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ analytics.views }} views •
+                                {{ analytics.conversion_rate }}% conversion
+                            </small>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0">
+                        <i class="bi bi-exclamation-triangle text-warning"></i> Necesită Atenție
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        {% set low_conv = products_analytics | selectattr('conversion_rate', '<', 5) | list %}
+                        {% for analytics in low_conv[:5] %}
+                            <li class="mb-2">
+                                <strong>{{ analytics.product.name }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {{ analytics.views }} views •
+                                    doar {{ analytics.conversion_rate }}% conversion
+                                </small>
+                            </li>
+                        {% else %}
+                            <li class="text-muted">Toate produsele au performanță bună</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,513 @@
+<!-- server/dashboard/templates/cart/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/cart" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    <a href="{{ dashboard_prefix }}/client/{{ cart.client.id }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-person"></i> Vezi Client
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'item_updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Cantitate actualizată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'item_removed' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Produs eliminat din coș!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') == 'empty_cart' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Coșul este gol! Nu poate fi convertit în comandă.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') == 'conversion_failed' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Eroare la convertirea în comandă!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+
+{% if request.query_params.get('error') == 'conversion_failed' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Eroare la convertirea în comandă!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') == 'quote_failed' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Eroare la generarea ofertei! Verificați log-urile pentru detalii.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') == 'active_quote_exists' %}
+<div class="alert alert-warning alert-dismissible fade show">
+    <i class="bi bi-info-circle me-2"></i>
+    Există deja o ofertă activă pentru acest coș!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+
+
+<div class="row g-4">
+    <!-- Left Column - Cart Items -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart text-primary me-2"></i>
+                    Produse în Coș ({{ cart.items|length }})
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if cart.items %}
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Produs</th>
+                                <th width="120" class="text-center">Cantitate</th>
+                                <th width="120" class="text-end">Preț Unit.</th>
+                                <th width="120" class="text-end">Subtotal</th>
+                                <th width="100" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cart.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <a href="{{ dashboard_prefix }}/product/{{ item.product.id }}"
+                                               class="text-decoration-none">
+                                                <strong>{{ item.product.name }}</strong>
+                                            </a>
+                                            <br>
+                                            <small class="text-muted">
+                                                SKU: {{ item.product.sku }} |
+                                                {{ item.product.category.name }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% if can_update(staff, 'cart') %}
+                                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/update-item/{{ item.id }}"
+                                          class="d-inline-flex align-items-center">
+                                        {{ csrf_input|safe }}
+                                        <input type="number" name="quantity"
+                                               value="{{ item.quantity }}"
+                                               min="1" max="999"
+                                               class="form-control form-control-sm text-center"
+                                               style="width: 70px;"
+                                               onchange="this.form.submit()">
+                                    </form>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ item.quantity }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {{ item.price_snapshot|int }} MDL
+                                    <br>
+                                    <small class="text-muted">{{ item.price_type }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <strong>{{ (item.price_snapshot * item.quantity)|int }} MDL</strong>
+                                </td>
+                                <td class="text-center">
+                                    {% if can_update(staff, 'cart') %}
+                                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/remove-item/{{ item.id }}"
+                                          style="display: inline;">
+                                        {{ csrf_input|safe }}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Eliminați acest produs din coș?');">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-light">
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    <strong>TOTAL:</strong>
+                                </td>
+                                <td class="text-end">
+                                    <h5 class="mb-0 text-success">{{ cart_total|int }} MDL</h5>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-cart-x fs-1"></i>
+                    <p class="mt-2 mb-0">Coșul este gol</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        {% if cart.items and can_update(staff, 'cart') %}
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/clear">
+                        {{ csrf_input|safe }}
+                        <button type="submit" class="btn btn-warning"
+                                onclick="return confirm('Sigur doriți să goliți coșul?');">
+                            <i class="bi bi-trash"></i> Golește Coșul
+                        </button>
+                    </form>
+
+                    {% if can_create(staff, 'order') and not has_active_order %}
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#convertModal">
+                        <i class="bi bi-cart-check"></i> Convertește în Comandă
+                    </button>
+                    {% elif has_active_order %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Clientul are deja o comandă activă!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column - Client & Cart Info -->
+    <div class="col-lg-4">
+        <!-- Client Info -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-person text-info me-2"></i>
+                    Informații Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-circle bg-{{ cart.client.status.value|lower }} text-white mx-auto mb-2"
+                         style="width: 60px; height: 60px; font-size: 24px;">
+                        {{ (cart.client.first_name or 'A')[0] }}{{ (cart.client.last_name or '')[0] }}
+                    </div>
+                    <h6>{{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</h6>
+                    <span class="badge bg-{{ cart.client.status.value|lower }}">
+                        {{ cart.client.status.value }}
+                    </span>
+                </div>
+
+                <dl class="row mb-0">
+                    {% if cart.client.email %}
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">{{ cart.client.email }}</dd>
+                    {% endif %}
+
+                    {% if cart.client.phone %}
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">{{ cart.client.phone }}</dd>
+                    {% endif %}
+
+                    <dt class="col-5">Comenzi:</dt>
+                    <dd class="col-7">
+                        <span class="badge bg-info">{{ client_orders_count }}</span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Cart Info -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle text-primary me-2"></i>
+                    Detalii Coș
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">ID Coș:</dt>
+                    <dd class="col-6">#{{ cart.id }}</dd>
+
+                    <dt class="col-6">Creat la:</dt>
+                    <dd class="col-6">{{ cart.created_at|datetime_local }}</dd>
+
+                    <dt class="col-6">Actualizat:</dt>
+                    <dd class="col-6">{{ cart.updated_at|datetime_local }}</dd>
+
+                    {% if cart.session_id %}
+                    <dt class="col-6">Sesiune:</dt>
+                    <dd class="col-6">
+                        <small><code>{{ cart.session_id[:8] }}...</code></small>
+                    </dd>
+                    {% endif %}
+
+                    <dt class="col-6">Vechime:</dt>
+                        <dd class="col-6">
+                            {% if cart_age == 0 %}
+                                <span class="badge bg-success">Azi</span>
+                            {% elif cart_age == 1 %}
+                                <span class="badge bg-info">Ieri</span>
+                            {% elif cart_age > 7 %}
+                                <span class="badge bg-warning">{{ cart_age }} zile</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ cart_age }} zile</span>
+                            {% endif %}
+
+                        </dd>
+                    </dl>
+                </dl>
+            </div>
+        </div>
+
+
+
+        <!-- Oferte Generate -->
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-white border-0">
+        <h5 class="mb-0">
+            <i class="bi bi-file-earmark-text text-success me-2"></i>
+            Oferte Generate
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if active_quotes %}
+        <div class="list-group">
+            {% for quote in active_quotes %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-1">{{ quote.invoice_number }}</h6>
+                    <small class="text-muted">
+                        Valabil până: {{ quote.valid_until|date_only }}
+                        {% if quote.sent_at %}
+                        | <i class="bi bi-check-circle text-success"></i> Trimis
+                        {% endif %}
+                    </small>
+                </div>
+                <div>
+                    <a href="{{ dashboard_prefix }}/invoice/{{ quote.id }}"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted text-center mb-3">Nu există oferte generate pentru acest coș</p>
+        {% endif %}
+
+        {% if cart.items and can_create(user, 'invoice') %}
+        <div class="d-grid mt-3">
+            <button type="button" class="btn btn-success"
+                    data-bs-toggle="modal" data-bs-target="#generateQuoteModal">
+                <i class="bi bi-file-earmark-plus"></i> Generează Ofertă
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal pentru generare ofertă -->
+{% if cart.items and can_create(user, 'invoice') %}
+<div class="modal fade" id="generateQuoteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ dashboard_prefix }}/invoice/quote/generate">
+                {{ csrf_input|safe }}
+                <input type="hidden" name="cart_id" value="{{ cart.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-earmark-text text-success"></i> Generează Ofertă
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Detalii ofertă:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Client: {{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</li>
+                            <li>Produse: {{ cart.items|length }}</li>
+                            <li>Valoare: {{ cart_total|int }} MDL</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Valabilitate ofertă</label>
+                        <select name="valid_days" class="form-select">
+                            <option value="3" selected>3 zile</option>
+                            <option value="7">7 zile</option>
+                            <option value="14">14 zile</option>
+                            <option value="30">30 zile</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Note/Observații (opțional)</label>
+                        <textarea name="notes" class="form-control" rows="3"
+                                  placeholder="Informații suplimentare pentru client..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trimite automat?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="send_email" id="sendEmail"
+                                   {% if cart.client.email %}checked{% endif %}
+                                   {% if not cart.client.email %}disabled{% endif %}>
+                            <label class="form-check-label" for="sendEmail">
+                                <i class="bi bi-envelope"></i> Trimite pe email
+                                {% if cart.client.email %}
+                                ({{ cart.client.email }})
+                                {% else %}
+                                <span class="text-muted">(clientul nu are email)</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="send_telegram" id="sendTelegram"
+                                   {% if cart.client.telegram_id %}checked{% endif %}>
+                            <label class="form-check-label" for="sendTelegram">
+                                <i class="bi bi-telegram"></i> Trimite pe Telegram
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Generează Ofertă
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+
+
+
+
+
+    </div>
+</div>
+
+<!-- Convert to Order Modal -->
+{% if cart.items and can_create(staff, 'order') and not has_active_order %}
+<div class="modal fade" id="convertModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ dashboard_prefix }}/cart/{{ cart.id }}/convert-to-order">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cart-check text-success"></i> Convertește în Comandă
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Convertiți acest coș în comandă nouă?</p>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Detalii comandă:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Produse: {{ cart.items|length }}</li>
+                            <li>Total: {{ cart_total|int }} MDL</li>
+                            <li>Client: {{ cart.client.first_name or 'Anonim' }} {{ cart.client.last_name or '' }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notă client (opțional)</label>
+                        <textarea name="client_note" class="form-control" rows="3"
+                                  placeholder="Notă sau instrucțiuni speciale..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Anulează
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Creează Comandă
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-submit on quantity change with debounce
+let submitTimeout;
+document.querySelectorAll('input[name="quantity"]').forEach(input => {
+    input.addEventListener('input', function() {
+        clearTimeout(submitTimeout);
+        submitTimeout = setTimeout(() => {
+            if (this.value && this.value > 0) {
+                this.form.submit();
+            }
+        }, 800);
+    });
+});
+</script>
+{% endblock %}

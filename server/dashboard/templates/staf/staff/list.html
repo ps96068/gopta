@@ -1,0 +1,349 @@
+<!-- server/dashboard/templates/staff/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Staff - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Staff{% endblock %}
+
+{% block page_actions %}
+{% if is_super_admin %}
+<a href="{{ dashboard_prefix }}/staff/create" class="btn btn-sm btn-success">
+    <i class="bi bi-plus-circle"></i> Staff Nou
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Membru staff nou creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'status_toggled' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Status staff actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('error') == 'cannot_deactivate_self' %}
+<div class="alert alert-danger alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Nu te poți dezactiva pe tine însuți!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <!-- Total Staff -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Staff</h6>
+                        <h1 class="mb-0 text-primary">{{ total }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Super Admin -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Super Admin</h6>
+                        <h1 class="mb-0 text-danger">{{ role_stats.super_admin or 0 }}</h1>
+                    </div>
+                    <div class="text-danger opacity-25">
+                        <i class="bi bi-shield-lock" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Manager</h6>
+                        <h1 class="mb-0 text-warning">{{ role_stats.manager or 0 }}</h1>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-person-badge" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supervisor -->
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Supervisor</h6>
+                        <h1 class="mb-0 text-info">{{ role_stats.supervisor or 0 }}</h1>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-eye" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Filters -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel text-primary me-2"></i>
+                    Filtre
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    <!-- Role -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Rol</label>
+                        <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">Toate rolurile</option>
+                            {% for value, label in staff_roles %}
+                            <option value="{{ value }}" {% if role_filter == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value=""
+                                   id="statusAll" {% if not is_active_filter %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusAll">Toți</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="true"
+                                   id="statusActive" {% if is_active_filter == "true" %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusActive">
+                                <i class="bi bi-check-circle text-success"></i> Activ
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="false"
+                                   id="statusInactive" {% if is_active_filter == "false" %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusInactive">
+                                <i class="bi bi-x-circle text-danger"></i> Inactiv
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Căutare</label>
+                        <div class="input-group input-group-sm">
+                            <input type="search" name="search" class="form-control"
+                                   placeholder="Nume, email..." value="{{ search_query or '' }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid">
+                        <a href="{{ dashboard_prefix }}/staff" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetează
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff List -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people text-primary me-2"></i>
+                        Listă Staff
+                    </h5>
+                    <small class="text-muted">
+                        {{ (page - 1) * per_page + 1 }} - {{ [page * per_page, total]|min }} din {{ total }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="50">ID</th>
+                                <th>Nume</th>
+                                <th>Email</th>
+                                <th width="150">Rol</th>
+                                <th width="100" class="text-center">Status</th>
+                                <th width="150">Ultima logare</th>
+                                <th width="120" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in staff_members %}
+                            <tr>
+                                <td><small class="text-muted">#{{ member.id }}</small></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle bg-{{ 'danger' if member.role.value == 'super_admin' else 'warning' if member.role.value == 'manager' else 'info' }} text-white me-3">
+                                            {{ member.first_name[0] }}{{ member.last_name[0] }}
+                                        </div>
+                                        <div>
+                                            <a href="{{ dashboard_prefix }}/staff/{{ member.id }}"
+                                               class="text-decoration-none text-dark fw-bold">
+                                                {{ member.first_name }} {{ member.last_name }}
+                                            </a>
+                                            {% if member.id == current_staff.id %}
+                                            <span class="badge bg-primary ms-1">Tu</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ member.email }}</td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if member.role.value == 'super_admin' else 'warning' if member.role.value == 'manager' else 'info' }}">
+                                        {{ member.role.value.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if member.is_active %}
+                                        <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if member.last_login %}
+                                        <small>{{ member.last_login|datetime_local }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Niciodată</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/}staff/{{ member.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+
+                                        {% if is_super_admin and member.role.value == 'manager' %}
+                                        <a href="{{ dashboard_prefix }}/staff/{{ member.id }}/permissions"
+                                           class="btn btn-outline-warning" title="Permisiuni">
+                                            <i class="bi bi-shield-lock"></i>
+                                        </a>
+                                        {% endif %}
+
+                                        {% if is_super_admin and member.id != current_staff.id %}
+                                        <a href="{{ dashboard_prefix }}/staff/{{ member.id }}/edit"
+                                           class="btn btn-outline-secondary" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="bi bi-people fs-1"></i>
+                                    <p class="mt-2">Nu sunt membri staff</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        <!-- Pagination code similar to client list -->
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+// Check pentru success/error messages
+const urlParams = new URLSearchParams(window.location.search);
+
+if (urlParams.get('success') === 'created') {
+    Dashboard.showToast('Membru staff nou creat cu succes!', 'success');
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+if (urlParams.get('success') === 'status_toggled') {
+    Dashboard.showToast('Status actualizat cu succes!', 'success');
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+if (urlParams.get('error') === 'cannot_deactivate_self') {
+    Dashboard.showToast('Nu te poți dezactiva pe tine însuți!', 'danger');
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+</script>
+{% endblock %}
+

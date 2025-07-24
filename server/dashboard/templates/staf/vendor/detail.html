@@ -1,0 +1,176 @@
+<!-- server/dashboard/templates/vendor/detail.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ vendor.name }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ vendor.name }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/vendor" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> Înapoi
+    </a>
+    {% if can_update(staff, 'vendor') %}
+    <a href="{{ dashboard_prefix }}/vendor/{{ vendor.id }}/edit" class="btn btn-sm btn-primary">
+        <i class="bi bi-pencil"></i> Editează
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if request.query_params.get('success') == 'updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Furnizor actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Vendor Info -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-building text-primary me-2"></i>
+                    Informații Furnizor
+                </h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-5">Email:</dt>
+                    <dd class="col-7">
+                        <a href="mailto:{{ vendor.email }}">{{ vendor.email }}</a>
+                    </dd>
+
+                    <dt class="col-5">Telefon:</dt>
+                    <dd class="col-7">
+                        <a href="tel:{{ vendor.phone }}">{{ vendor.phone }}</a>
+                    </dd>
+
+                    {% if vendor.contact_person %}
+                    <dt class="col-5">Contact:</dt>
+                    <dd class="col-7">{{ vendor.contact_person }}</dd>
+                    {% endif %}
+
+                    {% if vendor.address %}
+                    <dt class="col-5">Adresă:</dt>
+                    <dd class="col-7">{{ vendor.address }}</dd>
+                    {% endif %}
+
+                    <dt class="col-5">Status:</dt>
+                    <dd class="col-7">
+                        {% if vendor.is_active %}
+                        <span class="badge bg-success">Activ</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactiv</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-5">Creat la:</dt>
+                    <dd class="col-7">{{ vendor.created_at|date_only }}</dd>
+                </dl>
+
+                {% if vendor.description %}
+                <hr>
+                <h6 class="text-muted">Descriere</h6>
+                <p>{{ vendor.description }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-graph-up text-success me-2"></i>
+                    Statistici
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h3 class="mb-0">{{ total_products }}</h3>
+                        <small class="text-muted">Total Produse</small>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="mb-0 text-success">{{ active_products }}</h3>
+                        <small class="text-muted">Produse Active</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam text-info me-2"></i>
+                        Produse Recente
+                    </h5>
+                    <a href="{{ dashboard_prefix }}/product?vendor_id={{ vendor.id }}"
+                       class="btn btn-sm btn-light">
+                        Vezi toate ({{ total_products }})
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_products %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>SKU</th>
+                                <th>Nume Produs</th>
+                                <th>Categorie</th>
+                                <th class="text-center">Status</th>
+                                <th width="100">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in recent_products %}
+                            <tr>
+                                <td><code>{{ product.sku }}</code></td>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/product/{{ product.id }}"
+                                       class="text-decoration-none">
+                                        {{ product.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ product.category.name }}</small>
+                                </td>
+                                <td class="text-center">
+                                    {% if product.is_active %}
+                                    <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/product/{{ product.id }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-box fs-1"></i>
+                    <p class="mt-2 mb-0">Nu sunt produse pentru acest furnizor</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

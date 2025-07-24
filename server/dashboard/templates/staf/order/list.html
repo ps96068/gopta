@@ -1,0 +1,466 @@
+<!-- server/dashboard/templates/staff/order/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <!-- NAVIGARE INTELIGENTĂ: Buton înapoi la client dacă se filtrează după client -->
+    {% if filtered_client and back_url %}
+    <a href="{{ back_url }}" class="btn btn-sm btn-secondary">
+        <i class="bi bi-arrow-left"></i> {{ back_text }}
+    </a>
+    {% endif %}
+
+    {% if can_create(staff, 'order') %}
+    <a href="{{ dashboard_prefix }}/order/create" class="btn btn-sm btn-primary">
+        <i class="bi bi-plus-circle"></i> Comandă Nouă
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/export?model=order" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'status_updated' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Status comandă actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'order_cancelled' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Comandă anulată cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Info Banner pentru filtrare client -->
+{% if filtered_client %}
+<div class="alert alert-info" role="alert">
+    <i class="bi bi-person-fill me-2"></i>
+    <strong>Filtrare activă:</strong> Afișez doar comenzile clientului
+    <strong>{{ filtered_client.first_name or 'Anonim' }} {{ filtered_client.last_name or '' }}</strong>
+    <a href="{{ dashboard_prefix }}/order" class="btn btn-sm btn-light ms-2">
+        <i class="bi bi-x"></i> Vezi toate comenzile
+    </a>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">
+                            {% if filtered_client %}
+                                Comenzi Client
+                            {% else %}
+                                Total Comenzi
+                            {% endif %}
+                        </h6>
+                        <h2 class="mb-0">{{ stats.total_orders }}</h2>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-cart-check" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Comenzi Noi</h6>
+                        <h2 class="mb-0 text-warning">{{ stats.new_orders }}</h2>
+                    </div>
+                    <div class="text-warning opacity-25">
+                        <i class="bi bi-exclamation-circle" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">În Procesare</h6>
+                        <h2 class="mb-0 text-info">{{ stats.processing_orders }}</h2>
+                    </div>
+                    <div class="text-info opacity-25">
+                        <i class="bi bi-arrow-repeat" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">
+                            {% if filtered_client %}
+                                Total Venituri Client
+                            {% else %}
+                                Venituri Lunare
+                            {% endif %}
+                        </h6>
+                        <h2 class="mb-0 text-success">{{ stats.monthly_revenue|int }}</h2>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-currency-dollar" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+                <small class="text-muted">MDL</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <!-- Păstrează filtrul de client dacă există -->
+            {% if client_filter %}
+            <input type="hidden" name="client_id" value="{{ client_filter }}">
+            {% endif %}
+
+            <div class="col-md-3">
+                <label class="form-label">Caută comandă</label>
+                <input type="search" name="search" class="form-control"
+                       placeholder="Nr. comandă, client..."
+                       value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">Toate</option>
+                    {% for status in order_statuses %}
+                    <option value="{{ status[0] }}" {% if status_filter == status[0] %}selected{% endif %}>
+                        {{ status[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Perioadă</label>
+                <select name="period" class="form-select">
+                    <option value="">Toate</option>
+                    <option value="today" {% if period_filter == 'today' %}selected{% endif %}>Azi</option>
+                    <option value="week" {% if period_filter == 'week' %}selected{% endif %}>Săptămâna asta</option>
+                    <option value="month" {% if period_filter == 'month' %}selected{% endif %}>Luna asta</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sortare</label>
+                <select name="sort_by" class="form-select">
+                    <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Data creării</option>
+                    <option value="order_number" {% if sort_by == 'order_number' %}selected{% endif %}>Nr. comandă</option>
+                    <option value="total_amount" {% if sort_by == 'total_amount' %}selected{% endif %}>Valoare</option>
+                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <div class="form-check">
+                    <input type="checkbox" name="sort_desc" class="form-check-input" id="sortDesc"
+                           {% if sort_desc %}checked{% endif %}>
+                    <label class="form-check-label" for="sortDesc">
+                        Desc
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Caută
+                    </button>
+                    <!-- Link reset care păstrează client_id dacă există -->
+                    <a href="{{ dashboard_prefix }}/order{% if client_filter %}?client_id={{ client_filter }}{% endif %}" class="btn btn-light">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-cart-check text-primary me-2"></i>
+                {% if filtered_client %}
+                    Comenzi {{ filtered_client.first_name or 'Client' }} {{ filtered_client.last_name or '' }}
+                {% else %}
+                    Listă Comenzi
+                {% endif %}
+            </h5>
+            <span class="badge bg-secondary">{{ total }} comenzi</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th width="120">Nr. Comandă</th>
+                        <!-- Ascunde coloana Client dacă se filtrează după un client specific -->
+                        {% if not filtered_client %}
+                        <th>Client</th>
+                        {% endif %}
+                        <th width="100" class="text-center">Produse</th>
+                        <th width="120" class="text-end">Total</th>
+                        <th width="120" class="text-center">Status</th>
+                        <th width="150">Creat la</th>
+                        <th width="150">Procesat de</th>
+                        <th width="120" class="text-center">Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>
+                            <a href="{{ dashboard_prefix }}/order/{{ order.id }}"
+                               class="text-decoration-none fw-bold">
+                                #{{ order.order_number }}
+                            </a>
+                        </td>
+                        <!-- Afișează coloana Client doar dacă nu se filtrează după client -->
+                        {% if not filtered_client %}
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-{{ order.client.status.value|lower }} text-white me-2">
+                                    {{ (order.client.first_name or 'A')[0] }}
+                                </div>
+                                <div>
+                                    <a href="{{ dashboard_prefix }}/client/{{ order.client.id }}"
+                                       class="text-decoration-none">
+                                        {{ order.client.first_name or 'Anonim' }} {{ order.client.last_name or '' }}
+                                    </a>
+                                    {% if order.client.email %}
+                                    <br>
+                                    <small class="text-muted">{{ order.client.email }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        {% endif %}
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ order.items|length }}</span>
+                        </td>
+                        <td class="text-end">
+                            <strong>{{ order.total_amount|int }} MDL</strong>
+                        </td>
+                        <td class="text-center">
+                            {% if order.status.value == 'new' %}
+                                <span class="badge bg-warning">Nouă</span>
+                            {% elif order.status.value == 'processing' %}
+                                <span class="badge bg-info">În procesare</span>
+                            {% elif order.status.value == 'completed' %}
+                                <span class="badge bg-success">Finalizată</span>
+                            {% elif order.status.value == 'cancelled' %}
+                                <span class="badge bg-danger">Anulată</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ order.created_at|datetime_local }}</small>
+                        </td>
+                        <td>
+                            {% if order.processed_by %}
+                            <small>
+                                {{ order.processed_by.first_name }} {{ order.processed_by.last_name }}<br>
+                                <span class="text-muted">{{ order.processed_at|date_only if order.processed_at }}</span>
+                            </small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ dashboard_prefix }}/order/{{ order.id }}"
+                                   class="btn btn-outline-primary" title="Vezi detalii">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if can_update(staff, 'order') and order.status.value in ['new', 'processing'] %}
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle"
+                                            data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        {% if order.status.value == 'new' %}
+                                        <li>
+                                            <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/process">
+                                                {{ csrf_input|safe }}
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="bi bi-arrow-right-circle text-info"></i> Procesează
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status.value == 'processing' %}
+                                        <li>
+                                            <form method="post" action="{{ dashboard_prefix }}/order/{{ order.id }}/complete">
+                                                {{ csrf_input|safe }}
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="bi bi-check-circle text-success"></i> Finalizează
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a href="#" class="dropdown-item text-danger"
+                                               onclick="showCancelModal({{ order.id }})">
+                                                <i class="bi bi-x-circle"></i> Anulează
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if filtered_client %}7{% else %}8{% endif %}" class="text-center py-4 text-muted">
+                            <i class="bi bi-cart fs-1"></i>
+                            <p class="mt-2">
+                                {% if filtered_client %}
+                                    Acest client nu are comenzi
+                                {% else %}
+                                    Nu sunt comenzi
+                                {% endif %}
+                            </p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white">
+        <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if page > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page - 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if period_filter %}&period={{ period_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ p }}</span>
+                    </li>
+                    {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if period_filter %}&period={{ period_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">{{ p }}</a>
+                    </li>
+                    {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page < total_pages %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page + 1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if period_filter %}&period={{ period_filter }}{% endif %}{% if client_filter %}&client_id={{ client_filter }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="cancelForm">
+                {{ csrf_input|safe }}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle text-danger"></i> Anulare Comandă
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Sigur doriți să anulați această comandă?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Motiv anulare *</label>
+                        <textarea name="reason" class="form-control" rows="3" required
+                                  placeholder="Specificați motivul anulării..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Închide
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Anulează Comanda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCancelModal(orderId) {
+    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+    document.getElementById('cancelForm').action = `/dashboard/order/${orderId}/cancel`;
+    modal.show();
+}
+</script>
+{% endblock %}

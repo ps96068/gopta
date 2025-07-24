@@ -1,0 +1,124 @@
+<!-- templates/dashboard/staff/vendor_staff/create.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Adaugă Angajat Vendor - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">Adaugă Angajat Vendor</h2>
+                <a href="/dashboard/staff/vendor_staff/" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Înapoi
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ error }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="/dashboard/staff/vendor_staff/create">
+                        <h5 class="mb-3">Date Personale</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Prenume <span class="text-danger">*</span></label>
+                                <input type="text" name="first_name" class="form-control" required
+                                       value="{{ form_data.first_name if form_data else '' }}"
+                                       placeholder="Ex: Ion">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nume <span class="text-danger">*</span></label>
+                                <input type="text" name="last_name" class="form-control" required
+                                       value="{{ form_data.last_name if form_data else '' }}"
+                                       placeholder="Ex: Popescu">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Telefon</label>
+                            <input type="text" name="phone" class="form-control"
+                                   value="{{ form_data.phone if form_data else '' }}"
+                                   placeholder="+373 60 123 456">
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Date Cont</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" required
+                                   value="{{ form_data.email if form_data else '' }}"
+                                   placeholder="email@example.com">
+                            <small class="text-muted">Va fi folosit pentru autentificare</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Parolă <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" required
+                                   minlength="8">
+                            <small class="text-muted">Minim 8 caractere</small>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Asociere Companie</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Companie <span class="text-danger">*</span></label>
+                            <select name="company_id" class="form-select" required>
+                                <option value="">Selectează compania...</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}"
+                                        {% if (form_data and form_data.company_id == company.id) or (preselected_company_id == company.id) %}selected{% endif %}>
+                                    {{ company.name }} ({{ company.tax_id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Rol <span class="text-danger">*</span></label>
+                            <select name="role" class="form-select" required>
+                                {% for role in vendor_roles %}
+                                <option value="{{ role.value }}"
+                                        {% if form_data and form_data.role == role.value %}selected{% endif %}>
+                                    {{ role.value|title }}
+                                    {% if role.value == 'admin' %}
+                                    - Acces complet la setările companiei
+                                    {% else %}
+                                    - Poate gestiona doar produsele
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Notă:</strong> După creare, angajatul va putea accesa Dashboard-ul Vendor
+                            folosind email-ul și parola setate aici.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="/dashboard/staff/vendor_staff/" class="btn btn-secondary">Anulează</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-person-plus me-2"></i>Creează Angajat
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base_staff.html" %}
+
+{% block title %}Companii Vendor - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">Companii Vendor</h2>
+                {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                <a href="/dashboard/staff/vendor_company/create" class="btn btn-primary">
+                    <i class="bi bi-plus me-2"></i>Adaugă Companie
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtre -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Caută după nume, CUI..."
+                                   value="{{ search or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="is_verified" class="form-select">
+                                <option value="">Toate companiile</option>
+                                <option value="true" {% if is_verified == true %}selected{% endif %}>Verificate</option>
+                                <option value="false" {% if is_verified == false %}selected{% endif %}>Neverificate</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-search me-2"></i>Caută
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista companiilor -->
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if companies %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Companie</th>
+                                    <th>CUI</th>
+                                    <th>Contact</th>
+                                    <th>Produse</th>
+                                    <th>Vânzări</th>
+                                    <th>Status</th>
+                                    <th>Acțiuni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in companies %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ item.company.name }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ item.company.legal_name }}</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ item.company.tax_id }}</td>
+                                    <td>
+                                        <small>
+                                            {{ item.company.email }}<br>
+                                            {{ item.company.phone }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ item.stats.total_products }}</span>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {{ item.stats.total_orders }} comenzi<br>
+                                            {{ "%.2f"|format(item.stats.total_revenue) }} MDL
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if item.company.is_verified %}
+                                            <span class="badge bg-success">Verificată</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Neverificată</span>
+                                        {% endif %}
+                                        {% if not item.company.is_active %}
+                                            <span class="badge bg-danger">Inactivă</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/dashboard/staff/vendor_company/{{ item.company.id }}"
+                                               class="btn btn-sm btn-outline-primary" title="Vezi detalii">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                                            <a href="/dashboard/staff/vendor_company/{{ item.company.id }}/edit"
+                                               class="btn btn-sm btn-outline-warning" title="Editează">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if current_staff.role.value == 'super_admin' %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="confirmDelete({{ item.company.id }}, '{{ item.company.name }}')"
+                                                    title="Șterge">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginare -->
+                    {% if total_pages > 1 %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}{% if is_verified is not none %}&is_verified={{ is_verified }}{% endif %}">
+                                    Anterior
+                                </a>
+                            </li>
+                            {% for p in range(1, total_pages + 1) %}
+                                {% if p == page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ p }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ p }}{% if search %}&search={{ search }}{% endif %}{% if is_verified is not none %}&is_verified={{ is_verified }}{% endif %}">
+                                            {{ p }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}{% if is_verified is not none %}&is_verified={{ is_verified }}{% endif %}">
+                                    Următor
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted">Nu există companii înregistrate.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pentru confirmare ștergere -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="deleteForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmare Ștergere</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Atenție!</strong> Această acțiune este ireversibilă!
+                    </div>
+                    <p>Sunteți sigur că doriți să ștergeți compania <strong id="companyName"></strong>?</p>
+                    <p class="text-muted">Toate datele asociate (angajați, produse) vor fi șterse!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anulează</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-2"></i>Șterge Permanent
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(companyId, companyName) {
+    document.getElementById('companyName').textContent = companyName;
+    document.getElementById('deleteForm').action = `/dashboard/staff/vendor_company/${companyId}/delete`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

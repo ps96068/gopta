@@ -1,0 +1,132 @@
+<!-- server/dashboard/templates/staf/post_image/gallery_modal.html -->
+
+<!-- Tab navigation -->
+<ul class="nav nav-tabs mb-3" id="galleryTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery-content" type="button">
+            <i class="bi bi-images"></i> Galerie ({{ images|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-content" type="button">
+            <i class="bi bi-cloud-upload"></i> Încarcă Imagine Nouă
+        </button>
+    </li>
+</ul>
+
+<!-- Tab content -->
+<div class="tab-content" id="galleryTabContent">
+    <!-- Gallery Tab -->
+    <div class="tab-pane fade show active" id="gallery-content" role="tabpanel">
+        {% if images %}
+        <div class="row g-3">
+            {% for image in images %}
+            <div class="col-md-4">
+                <div class="card image-select-card"
+                     data-image-url="/{{ image.image_path }}"
+                     data-image-alt="{{ image.alt_text or '' }}"
+                     data-image-caption="{{ image.caption or '' }}"
+                     style="cursor: pointer;">
+                    <img src="/{{ image.image_path }}"
+                         class="card-img-top"
+                         alt="{{ image.alt_text }}"
+                         style="height: 150px; object-fit: cover;">
+                    <div class="card-body p-2">
+                        <small class="text-truncate d-block">{{ image.file_name }}</small>
+                        {% if image.caption %}
+                        <small class="text-muted text-truncate d-block">{{ image.caption }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-images display-4 text-muted"></i>
+            <p class="text-muted mt-2">Nu există imagini încărcate pentru acest articol</p>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('upload-tab').click()">
+                <i class="bi bi-upload"></i> Încarcă Prima Imagine
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Upload Tab -->
+    <div class="tab-pane fade" id="upload-content" role="tabpanel">
+        <form method="POST"
+              action="/dashboard/staff/post_image/{{ post_id }}/upload"
+              enctype="multipart/form-data"
+              id="uploadForm">
+
+            <div class="mb-3">
+                <label for="imageFile" class="form-label">Selectează imagine</label>
+                <input type="file"
+                       class="form-control"
+                       id="imageFile"
+                       name="image"
+                       accept=".jpg,.jpeg,.png"
+                       required>
+                <div class="form-text">JPG, PNG. Max 2MB.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="altText" class="form-label">Text alternativ (pentru SEO)</label>
+                <input type="text"
+                       class="form-control"
+                       id="altText"
+                       name="alt_text"
+                       placeholder="Descriere scurtă a imaginii">
+            </div>
+
+            <div class="mb-3">
+                <label for="caption" class="form-label">Legendă (opțional)</label>
+                <input type="text"
+                       class="form-control"
+                       id="caption"
+                       name="caption"
+                       placeholder="Text afișat sub imagine">
+            </div>
+
+            <input type="hidden" name="is_featured" value="false">
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Imaginea va fi încărcată și pagina se va reîncărca automat.
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary" id="uploadBtn">
+                    <i class="bi bi-upload"></i> Încarcă Imagine
+                </button>
+            </div>
+        </form>
+
+        <div id="uploadResult" class="mt-3"></div>
+    </div>
+</div>
+
+<style>
+.image-select-card {
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.image-select-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.image-select-card.selected {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+}
+
+.nav-tabs .nav-link.active {
+    font-weight: 600;
+}
+</style>

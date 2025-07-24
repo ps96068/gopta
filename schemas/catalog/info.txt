@@ -1,0 +1,52 @@
+schemas/product.py:
+
+Doar pentru produse (fără prețuri)
+Create, Update, Response
+Search params și paginare
+
+schemas/product_price.py:
+
+ProductPriceCreate - un preț individual
+ProductPriceBulkCreate - toate 4 prețurile odată
+ProductPricesForUser - prețuri filtrate pe user status
+Validare ierarhie și currency
+
+=============
+
+Ce am implementat pentru ProductImage:
+Schemas principale:
+
+ProductImageUpload - pentru endpoint-ul de upload
+ProductImageCreate - salvare în DB după upload fizic
+ProductImageUpdate - modificare alt text, primary, ordine
+ProductImageResponse - include URL calculat și size în KB
+
+Funcționalități speciale:
+
+ProductImageBulkUpdate - actualizare ordine pentru mai multe imagini
+ProductImagesReorder - reordonare drag & drop
+ProductImageStats - statistici pentru dashboard
+
+Features importante:
+
+Calculare automată file_url pentru frontend
+Conversie automată size în KB/MB
+Validare ordine și ID-uri unice
+Suport pentru setare imagine primară
+
+=================
+
+Pentru Category:
+
+CategoryCreate - validare slug format kebab-case
+CategoryUpdate - actualizare parțială
+CategoryImageUpload - validare upload imagine
+CategoryTreeResponse - pentru afișare ierarhică
+Path imagine cu default
+
+Caracteristici importante:
+
+Slug doar litere mici, cifre și cratimă
+Validare dimensiune imagine (max 2MB)
+Response include count-uri pentru dashboard
+Suport pentru categorii ierarhice

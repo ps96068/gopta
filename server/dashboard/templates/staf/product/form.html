@@ -1,0 +1,266 @@
+<!-- server/dashboard/templates/product/form.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/product" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-box-seam text-primary me-2"></i>
+                    {{ page_title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Alerts -->
+                {% if request.query_params.get('error') == 'sku_exists' %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Acest SKU există deja! Alegeți alt SKU.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% elif request.query_params.get('error') == 'slug_exists' %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Acest slug există deja! Alegeți alt nume sau slug.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% elif request.query_params.get('error') %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Eroare la salvare. Verificați datele introduse.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <!-- Form -->
+                <form method="post">
+                    {{ csrf_input|safe }}
+                    <div class="row">
+                        <!-- Left Column - Basic Info -->
+                        <div class="col-lg-8">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-info-circle"></i> Informații de Bază
+                            </h6>
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nume Produs <span class="text-danger">*</span></label>
+                                        <input type="text" name="name" class="form-control"
+                                               value="{{ product.name if product else '' }}"
+                                               required onkeyup="generateSlug(this.value)">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">SKU <span class="text-danger">*</span></label>
+                                        <input type="text" name="sku" class="form-control"
+                                               value="{{ product.sku if product else '' }}"
+                                               required style="text-transform: uppercase;">
+                                        <small class="form-text text-muted">Cod unic produs</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Slug <span class="text-danger">*</span></label>
+                                <input type="text" name="slug" id="slug" class="form-control"
+                                       value="{{ product.slug if product else '' }}"
+                                       required pattern="[a-z0-9-]+">
+                                <small class="form-text text-muted">
+                                    URL-friendly: doar litere mici, cifre și liniuțe
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Descriere Scurtă</label>
+                                <textarea name="short_description" class="form-control" rows="2"
+                                          maxlength="500">{{ product.short_description if product else '' }}</textarea>
+                                <small class="form-text text-muted">Max 500 caractere</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Descriere Completă</label>
+                                <textarea name="description" class="form-control" rows="5">{{ product.description if product else '' }}</textarea>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-search"></i> SEO
+                            </h6>
+
+                            <div class="mb-3">
+                                <label class="form-label">Meta Title</label>
+                                <input type="text" name="meta_title" class="form-control"
+                                       value="{{ product.meta_title if product else '' }}"
+                                       maxlength="255">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Meta Description</label>
+                                <textarea name="meta_description" class="form-control" rows="2"
+                                          maxlength="500">{{ product.meta_description if product else '' }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Right Column - Settings -->
+                        <div class="col-lg-4">
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-gear"></i> Setări
+                            </h6>
+
+                            <div class="mb-3">
+                                <label class="form-label">Categorie <span class="text-danger">*</span></label>
+                                <select name="category_id" class="form-select" required>
+                                    <option value="">-- Selectează --</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}"
+                                            {% if product and product.category_id == category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Furnizor <span class="text-danger">*</span></label>
+                                <select name="vendor_id" class="form-select" required>
+                                    <option value="">-- Selectează --</option>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.id }}"
+                                            {% if product and product.vendor_id == vendor.id %}selected{% endif %}>
+                                        {{ vendor.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Ordine Afișare</label>
+                                <input type="number" name="sort_order" class="form-control"
+                                       value="{{ product.sort_order if product else 0 }}"
+                                       min="0">
+                                <small class="form-text text-muted">0 = prima poziție</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_active"
+                                           id="isActive" value="true"
+                                           {% if not product or product.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="isActive">
+                                        <strong>Produs Activ</strong>
+                                    </label>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Produsele inactive nu sunt vizibile în WebApp
+                                </small>
+                            </div>
+
+                            {% if not product %}
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <small>
+                                    După creare, veți putea adăuga imagini și prețuri pentru acest produs.
+                                </small>
+                            </div>
+                            {% else %}
+                            <hr class="my-3">
+
+                            <div class="d-grid gap-2">
+                                <a href="{{ dashboard_prefix }}/product_image?product_id={{ product.id }}"
+                                   class="btn btn-light">
+                                    <i class="bi bi-images"></i> Gestionare Imagini
+                                </a>
+                                <a href="{{ dashboard_prefix }}/product_price?product_id={{ product.id }}"
+                                   class="btn btn-light">
+                                    <i class="bi bi-currency-dollar"></i> Gestionare Prețuri
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ dashboard_prefix }}/product{% if product %}/{{ product.id }}{% endif %}"
+                           class="btn btn-light">
+                            <i class="bi bi-x-circle"></i> Anulează
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i>
+                            {% if product %}Actualizează{% else %}Creează{% endif %} Produs
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if product %}
+        <!-- Danger Zone -->
+        <div class="card border-danger mt-4">
+            <div class="card-header bg-danger bg-opacity-10 border-danger">
+                <h5 class="mb-0 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Zonă Periculoasă
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    <strong>Atenție!</strong> Ștergerea produsului va face produsul indisponibil în WebApp.
+                </p>
+
+                <form method="post" action="{{ dashboard_prefix }}/product/{{ product.id }}/delete"
+                      onsubmit="return confirm('Sigur doriți să ștergeți acest produs?');">
+                    {{ csrf_input|safe }}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Șterge Produs
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Generate slug from name
+function generateSlug(name) {
+    const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    // Only update if user hasn't manually edited
+    const slugField = document.getElementById('slug');
+    if (!slugField.dataset.manual) {
+        slugField.value = slug;
+    }
+}
+
+// Mark slug as manually edited
+document.getElementById('slug').addEventListener('input', function() {
+    this.dataset.manual = 'true';
+});
+
+// Auto uppercase SKU
+document.querySelector('input[name="sku"]').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+</script>
+{% endblock %}

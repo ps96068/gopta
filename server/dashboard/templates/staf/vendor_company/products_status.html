@@ -1,0 +1,244 @@
+<!-- server/dashboard/templates/staff/vendor_company/products_status.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">
+                    <i class="bi bi-boxes me-2"></i>
+                    Status Produse - {{ company.name }}
+                </h2>
+                <div class="d-flex gap-2">
+                    {% if not show_inactive %}
+                        <a href="?show_inactive=true" class="btn btn-outline-light">
+                            <i class="bi bi-eye-slash me-1"></i>Arată inactive
+                        </a>
+                    {% else %}
+                        <a href="?" class="btn btn-outline-light">
+                            <i class="bi bi-eye me-1"></i>Doar active
+                        </a>
+                    {% endif %}
+
+                    {% if current_staff.role.value in ['manager', 'super_admin'] and company.is_active and stats.inactive_products > 0 %}
+                        <form method="post" action="/dashboard/staff/vendor_company/{{ company.id }}/reactivate-products"
+                              style="display: inline;"
+                              onsubmit="return confirm('Reactivezi toate produsele și prețurile companiei?')">
+                            {{ csrf_input|safe }}
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Reactivează Tot
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <a href="/dashboard/staff/vendor_company/{{ company.id }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Înapoi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistici -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Produse Totale</h6>
+                    <h3 class="mb-0">{{ stats.total_products }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Produse Active</h6>
+                    <h3 class="mb-0">{{ stats.active_products }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Produse Inactive</h6>
+                    <h3 class="mb-0">{{ stats.inactive_products }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Prețuri Active</h6>
+                    <h3 class="mb-0">{{ stats.active_prices }}/{{ stats.total_prices }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerte status companie -->
+    {% if not company.is_active %}
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Companie Dezactivată:</strong> Toate produsele și prețurile sunt automat dezactivate.
+        Pentru a reactiva produsele, mai întâi reactivează compania.
+    </div>
+    {% elif stats.inactive_products > 0 %}
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Atenție:</strong> {{ stats.inactive_products }} produse sunt dezactivate.
+        {% if current_staff.role.value in ['manager', 'super_admin'] %}
+            Folosește butonul "Reactivează Tot" pentru a le reactiva pe toate odată.
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Lista produse -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-list me-2"></i>
+                Lista Produse
+                {% if show_inactive %}(Include inactive){% else %}(Doar active){% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if products %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Produs</th>
+                            <th>SKU</th>
+                            <th>Categorie</th>
+                            <th>Prețuri</th>
+                            <th>Stoc</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr class="{% if not product.is_active %}table-warning{% endif %}">
+                            <td>
+                                {% if product.is_active %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Activ
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-x-circle me-1"></i>Inactiv
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <!-- Imagine produs -->
+                                    {% if product.images and product.images|length > 0 %}
+                                        <img src="/{{ product.images[0].image_path }}"
+                                             alt="{{ product.name }}"
+                                             class="me-2 rounded"
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light me-2 d-flex align-items-center justify-content-center rounded"
+                                             style="width: 40px; height: 40px;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ product.name }}</strong>
+                                        {% if product.short_description %}
+                                            <br><small class="text-muted">{{ product.short_description[:50] }}...</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td><code>{{ product.sku }}</code></td>
+                            <td>
+                                {% if product.category %}
+                                    <span class="badge bg-light text-dark">{{ product.category.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">Necategorizat</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.prices %}
+                                    {% set active_prices = product.prices | selectattr('is_active') | list %}
+                                    {% set total_prices = product.prices | list %}
+
+                                    <span class="badge {% if active_prices|length == total_prices|length %}bg-success{% elif active_prices|length > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ active_prices|length }}/{{ total_prices|length }}
+                                    </span>
+
+                                    <!-- Tooltip cu detalii prețuri -->
+                                    <button type="button" class="btn btn-sm btn-outline-info ms-1"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="top"
+                                            title="{% for price in product.prices %}{{ price.price_type.value }}: {% if price.is_active %}✓{% else %}✗{% endif %} {{ '%.2f'|format(price.amount) }} MDL{% if not loop.last %} | {% endif %}{% endfor %}">
+                                        <i class="bi bi-info-circle"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">Fără prețuri</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.in_stock %}
+                                    <span class="badge bg-success">În stoc</span>
+                                    {% if product.stock_quantity %}
+                                        <small class="text-muted">({{ product.stock_quantity }})</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-danger">Epuizat</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/dashboard/staff/product/{{ product.id }}"
+                                       class="btn btn-outline-primary btn-sm" title="Vezi detalii">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if current_staff.role.value in ['manager', 'super_admin'] %}
+                                        <a href="/dashboard/staff/product/{{ product.id }}/edit"
+                                           class="btn btn-outline-warning btn-sm" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-box text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">Nu există produse</h5>
+                {% if not show_inactive %}
+                    <p class="text-muted">Toate produsele sunt inactive. <a href="?show_inactive=true">Arată produsele inactive</a></p>
+                {% else %}
+                    <p class="text-muted">Această companie nu are produse înregistrate.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips pentru detaliile prețurilor
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

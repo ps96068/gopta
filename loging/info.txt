@@ -1,0 +1,15 @@
+
+
+Utilizare în cod:
+
+
+# În orice modul server
+import logging
+logger = logging.getLogger("server.dashboard.routers")
+logger.debug("Detailed debug info")
+
+# În orice modul bot
+import logging
+logger = logging.getLogger("bot.handlers.commands")
+logger.info("Command executed")
+

@@ -1,0 +1,8 @@
+2025-07-20 18:23:41,166 - INFO - ORDER_CREATED: Cont-20250720-0001 | Client: Client (ID: 1) | Total: 2036.88 MDL | Items: 2
+2025-07-20 18:23:41,166 - INFO - SYSTEM: WebSocket notification manager available
+2025-07-20 18:23:41,166 - INFO - NOTIFICATION_SENT: Order Cont-20250720-0001 | Channel: WebSocket | Status: SUCCESS
+2025-07-20 18:23:41,741 - INFO - NOTIFICATION_SAVED: Order Cont-20250720-0001 | Channel: Database | Status: PENDING
+2025-07-20 19:03:23,336 - INFO - ORDER_CREATED: Cont-20250720-0002 | Client: Instal Test2 (ID: 16) | Total: 3336.76 MDL | Items: 3
+2025-07-20 19:03:23,336 - INFO - SYSTEM: WebSocket notification manager available
+2025-07-20 19:03:23,337 - INFO - NOTIFICATION_SENT: Order Cont-20250720-0002 | Channel: WebSocket | Status: SUCCESS
+2025-07-20 19:03:23,893 - INFO - NOTIFICATION_SAVED: Order Cont-20250720-0002 | Channel: Database | Status: PENDING

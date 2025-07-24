@@ -1,0 +1,496 @@
+<!-- server/dashboard/templates/cart/select_products.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Selectare Produse - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Coș Nou - Pasul 2: Selectare Produse{% endblock %}
+
+{% block page_actions %}
+<a href="{{ dashboard_prefix }}/cart/create" class="btn btn-sm btn-secondary">
+    <i class="bi bi-arrow-left"></i> Înapoi la Selectare Client
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('error') == 'no_products' %}
+<div class="alert alert-warning alert-dismissible fade show">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Selectați cel puțin un produs pentru a crea coșul!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Progress -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-center flex-fill">
+                <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center"
+                     style="width: 40px; height: 40px;">
+                    <i class="bi bi-check"></i>
+                </div>
+                <p class="mb-0 mt-2 small">Selectare Client</p>
+            </div>
+            <div class="flex-fill">
+                <hr style="margin-top: 20px;">
+            </div>
+            <div class="text-center flex-fill">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center"
+                     style="width: 40px; height: 40px;">
+                    <strong>2</strong>
+                </div>
+                <p class="mb-0 mt-2 small">Selectare Produse</p>
+            </div>
+            <div class="flex-fill">
+                <hr style="margin-top: 20px;">
+            </div>
+            <div class="text-center flex-fill">
+                <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
+                     style="width: 40px; height: 40px;">
+                    <strong>3</strong>
+                </div>
+                <p class="mb-0 mt-2 small text-muted">Finalizare</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Info -->
+<div class="alert alert-info mb-4">
+    <div class="d-flex align-items-center">
+        <div class="avatar-circle bg-{{ client.status.value|lower }} text-white me-3"
+             style="width: 40px; height: 40px;">
+            {{ (client.first_name or 'A')[0] }}{{ (client.last_name or '')[0] }}
+        </div>
+        <div>
+            <strong>Client:</strong> {{ client.first_name or 'Anonim' }} {{ client.last_name or '' }}
+            {% if client.email %}({{ client.email }}){% endif %}
+            <span class="badge bg-{{ client.status.value|lower }} ms-2">{{ client.status.value }}</span>
+        </div>
+    </div>
+</div>
+
+<form method="post" action="{{ dashboard_prefix }}/cart/create-with-products" id="productsForm">
+    {{ csrf_input|safe }}
+    <input type="hidden" name="client_id" value="{{ client.id }}">
+
+    <div class="row g-4">
+        <!-- Left: Product Selection -->
+        <div class="col-lg-8">
+            <!-- Filters -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <input type="search" id="searchInput" class="form-control"
+                                   placeholder="Caută produs..." value="{{ search_query or '' }}"
+                                   onchange="updateFilters()">
+                        </div>
+                        <div class="col-md-4">
+                            <select id="categorySelect" class="form-select" onchange="updateFilters()">
+                                <option value="">Toate categoriile</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>
+                                    {{ cat.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="btn btn-primary w-100" onclick="updateFilters()">
+                                <i class="bi bi-search"></i> Filtrează
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam text-primary me-2"></i>
+                        Produse Disponibile
+                    </h5>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    <div class="row g-3">
+                        {% for product in products %}
+                        <div class="col-md-6">
+                            <div class="card h-100 product-card">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-1">{{ product.name }}</h6>
+                                    <p class="text-muted small mb-2">
+                                        SKU: {{ product.sku }} | {{ product.category.name }}
+                                    </p>
+                                    <div class="mb-3">
+                                        {% for price in product.prices %}
+                                            {% if price.price_type.value == client.status.value %}
+                                            <div class="h5 mb-0 text-success">
+                                                {{ price.amount|int }} MDL
+                                            </div>
+                                            <small class="text-muted">Preț {{ price.price_type.value }}</small>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <input type="number" name="product_{{ product.id }}"
+                                               value="0" min="0" max="999"
+                                               class="form-control form-control-sm me-2 product-quantity"
+                                               data-product-id="{{ product.id }}"
+                                               data-product-name="{{ product.name }}"
+                                               data-product-price="{% for price in product.prices %}{% if price.price_type.value == client.status.value %}{{ price.amount|int }}{% endif %}{% endfor %}"
+                                               style="width: 70px;">
+                                        <small class="text-muted">buc</small>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-1"></i>
+                            <p class="mt-2">Nu s-au găsit produse</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Selected Products Summary -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 80px;">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart-check text-success me-2"></i>
+                        Produse Selectate
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="selectedProducts" style="max-height: 400px; overflow-y: auto;">
+                        <p class="text-muted text-center py-3" id="emptyMessage">
+                            Nu ați selectat niciun produs
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <h5>Total:</h5>
+                        <h5 class="text-success" id="totalAmount">0 MDL</h5>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success" id="createCartBtn" disabled>
+                            <i class="bi bi-cart-plus"></i> Creează Coș cu Produse
+                        </button>
+
+                        <a href="{{ dashboard_prefix }}/cart" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Anulează
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.product-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.product-card:hover {
+    border-color: #e9ecef;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.product-card.selected {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.badge.bg-anonim { background-color: #6c757d !important; }
+.badge.bg-user { background-color: #28a745 !important; }
+.badge.bg-instalator { background-color: #ffc107 !important; color: #212529 !important; }
+.badge.bg-pro { background-color: #17a2b8 !important; }
+
+.selected-product-item {
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+
+<!--<script>-->
+
+<!--        // Save selected products to localStorage-->
+<!--    function saveSelectedProducts() {-->
+<!--        const selected = {};-->
+<!--        document.querySelectorAll('.product-quantity').forEach(input => {-->
+<!--            const quantity = parseInt(input.value) || 0;-->
+<!--            if (quantity > 0) {-->
+<!--                selected[input.dataset.productId] = quantity;-->
+<!--            }-->
+<!--        });-->
+<!--        localStorage.setItem('selectedProducts', JSON.stringify(selected));-->
+<!--    }-->
+
+<!--    // Restore selected products from localStorage-->
+<!--    function restoreSelectedProducts() {-->
+<!--        const selected = JSON.parse(localStorage.getItem('selectedProducts') || '{}');-->
+<!--        document.querySelectorAll('.product-quantity').forEach(input => {-->
+<!--            const pid = input.dataset.productId;-->
+<!--            if (selected[pid]) {-->
+<!--                input.value = selected[pid];-->
+<!--            }-->
+<!--        });-->
+<!--    }-->
+
+
+
+<!--// Update filters-->
+<!--function updateFilters() {-->
+<!--    const search = document.getElementById('searchInput').value;-->
+<!--    const categoryId = document.getElementById('categorySelect').value;-->
+<!--    const clientId = {{ client.id }};-->
+
+<!--    let url = `/dashboard/cart/select-products?client_id=${clientId}`;-->
+<!--    if (search) url += `&search=${encodeURIComponent(search)}`;-->
+<!--    if (categoryId) url += `&category_id=${categoryId}`;-->
+
+<!--    window.location.href = url;-->
+<!--}-->
+
+
+<!--// Update selected products display-->
+<!--function updateSelectedProducts() {-->
+<!--    const selectedContainer = document.getElementById('selectedProducts');-->
+<!--    const emptyMessage = document.getElementById('emptyMessage');-->
+<!--    const createBtn = document.getElementById('createCartBtn');-->
+<!--    let total = 0;-->
+<!--    let hasProducts = false;-->
+<!--    let selectedHTML = '';-->
+
+<!--    document.querySelectorAll('.product-quantity').forEach(input => {-->
+<!--        const quantity = parseInt(input.value) || 0;-->
+<!--        if (quantity > 0) {-->
+<!--            hasProducts = true;-->
+<!--            const productName = input.dataset.productName;-->
+<!--            const productPrice = parseInt(input.dataset.productPrice) || 0;-->
+<!--            const subtotal = quantity * productPrice;-->
+<!--            total += subtotal;-->
+
+<!--            selectedHTML += `-->
+<!--                <div class="selected-product-item">-->
+<!--                    <div class="d-flex justify-content-between align-items-center">-->
+<!--                        <div>-->
+<!--                            <strong>${productName}</strong><br>-->
+<!--                            <small class="text-muted">${quantity} x ${productPrice} MDL</small>-->
+<!--                        </div>-->
+<!--                        <div class="text-end">-->
+<!--                            <strong>${subtotal} MDL</strong>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            `;-->
+
+<!--            // Mark product card as selected-->
+<!--            input.closest('.product-card').classList.add('selected');-->
+<!--        } else {-->
+<!--            // Remove selected class-->
+<!--            input.closest('.product-card').classList.remove('selected');-->
+<!--        }-->
+<!--    });-->
+
+<!--    if (hasProducts) {-->
+<!--        selectedContainer.innerHTML = selectedHTML;-->
+<!--        emptyMessage.style.display = 'none';-->
+<!--        createBtn.disabled = false;-->
+<!--    } else {-->
+<!--        selectedContainer.innerHTML = '<p class="text-muted text-center py-3" id="emptyMessage">Nu ați selectat niciun produs</p>';-->
+<!--        createBtn.disabled = true;-->
+<!--    }-->
+
+<!--    document.getElementById('totalAmount').textContent = `${total} MDL`;-->
+
+<!--    saveSelectedProducts();-->
+<!--}-->
+
+<!--// Listen for quantity changes-->
+<!--document.querySelectorAll('.product-quantity').forEach(input => {-->
+<!--    input.addEventListener('input', updateSelectedProducts);-->
+<!--    input.addEventListener('change', updateSelectedProducts);-->
+<!--});-->
+
+<!--    // Initialize on load-->
+<!--        restoreSelectedProducts();-->
+<!--        updateSelectedProducts();-->
+
+
+
+<!--        // Clear localStorage on form submit or cancel-->
+<!--        document.getElementById('productsForm').addEventListener('submit', function() {-->
+<!--            localStorage.removeItem('selectedProducts');-->
+<!--        });-->
+<!--        document.querySelector('a.btn-secondary').addEventListener('click', function() {-->
+<!--            localStorage.removeItem('selectedProducts');-->
+<!--        });-->
+
+<!--</script>-->
+
+
+<script>
+
+
+    function updateFilters() {
+        const search = document.getElementById('searchInput').value;
+        const categoryId = document.getElementById('categorySelect').value;
+        const clientId = {{ client.id }};
+        let url = `/dashboard/staff/cart/select-products?client_id=${clientId}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (categoryId) url += `&category_id=${categoryId}`;
+        window.location.href = url;
+    }
+
+
+    // Save/update selected product in localStorage
+function saveProductToStorage(productId, name, price, quantity) {
+    let selected = JSON.parse(localStorage.getItem('selectedProducts') || '{}');
+    if (quantity > 0) {
+        selected[productId] = { name, price, quantity };
+    } else {
+        delete selected[productId];
+    }
+    localStorage.setItem('selectedProducts', JSON.stringify(selected));
+}
+
+// Restore input values from localStorage
+function restoreInputsFromStorage() {
+    let selected = JSON.parse(localStorage.getItem('selectedProducts') || '{}');
+    document.querySelectorAll('.product-quantity').forEach(input => {
+        let pid = input.dataset.productId;
+        if (selected[pid]) {
+            input.value = selected[pid].quantity;
+            input.closest('.product-card').classList.add('selected');
+        } else {
+            input.value = 0;
+            input.closest('.product-card').classList.remove('selected');
+        }
+    });
+}
+
+// Render selected products summary from localStorage
+function renderSelectedProducts() {
+    let selected = JSON.parse(localStorage.getItem('selectedProducts') || '{}');
+    const selectedContainer = document.getElementById('selectedProducts');
+    const createBtn = document.getElementById('createCartBtn');
+    let total = 0;
+    let selectedHTML = '';
+    let hasProducts = false;
+
+    for (let pid in selected) {
+        hasProducts = true;
+        let prod = selected[pid];
+        let subtotal = prod.quantity * prod.price;
+        total += subtotal;
+        selectedHTML += `
+            <div class="selected-product-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${prod.name}</strong><br>
+                        <small class="text-muted">${prod.quantity} x ${prod.price} MDL</small>
+                    </div>
+                    <div class="text-end">
+                        <strong>${subtotal} MDL</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    if (hasProducts) {
+        selectedContainer.innerHTML = selectedHTML;
+        createBtn.disabled = false;
+    } else {
+        selectedContainer.innerHTML = '<p class="text-muted text-center py-3" id="emptyMessage">Nu ați selectat niciun produs</p>';
+        createBtn.disabled = true;
+    }
+    document.getElementById('totalAmount').textContent = `${total} MDL`;
+}
+
+// On input change, update storage and summary
+document.querySelectorAll('.product-quantity').forEach(input => {
+    input.addEventListener('input', function() {
+        saveProductToStorage(
+            input.dataset.productId,
+            input.dataset.productName,
+            parseInt(input.dataset.productPrice) || 0,
+            parseInt(input.value) || 0
+        );
+        renderSelectedProducts();
+        restoreInputsFromStorage();
+    });
+    input.addEventListener('change', function() {
+        saveProductToStorage(
+            input.dataset.productId,
+            input.dataset.productName,
+            parseInt(input.dataset.productPrice) || 0,
+            parseInt(input.value) || 0
+        );
+        renderSelectedProducts();
+        restoreInputsFromStorage();
+    });
+});
+
+// On page load
+restoreInputsFromStorage();
+renderSelectedProducts();
+
+// Clear storage on submit/cancel
+document.getElementById('productsForm').addEventListener('submit', function(e) {
+    // Remove old hidden inputs
+    document.querySelectorAll('.dynamic-product-input').forEach(el => el.remove());
+
+    let selected = JSON.parse(localStorage.getItem('selectedProducts') || '{}');
+    for (let pid in selected) {
+        // Check if input already exists in the form
+        if (!document.querySelector(`input[name="product_${pid}"]`)) {
+            let input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = `product_${pid}`;
+            input.value = selected[pid].quantity;
+            input.className = 'dynamic-product-input';
+            this.appendChild(input);
+        }
+    }
+    // After submit, clear localStorage
+    localStorage.removeItem('selectedProducts');
+});
+document.querySelector('a.btn-secondary').addEventListener('click', function() {
+    localStorage.removeItem('selectedProducts');
+});
+
+
+</script>
+
+
+
+{% endblock %}

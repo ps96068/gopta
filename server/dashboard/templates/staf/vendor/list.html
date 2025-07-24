@@ -1,0 +1,254 @@
+<!-- server/dashboard/templates/vendor/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Furnizori - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Furnizori{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    {% if can_create(staff, 'vendor') %}
+    <a href="{{ dashboard_prefix }}/vendor/create" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-circle"></i> Furnizor Nou
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Furnizor nou creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Furnizori</h6>
+                        <h1 class="mb-0 text-primary">{{ total_vendors }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-building" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Activi</h6>
+                        <h1 class="mb-0 text-success">{{ active_vendors }}</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Inactivi</h6>
+                        <h1 class="mb-0 text-danger">{{ inactive_vendors }}</h1>
+                    </div>
+                    <div class="text-danger opacity-25">
+                        <i class="bi bi-x-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Filters -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel text-primary me-2"></i>
+                    Filtre
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value=""
+                                   id="statusAll" {% if not is_active_filter %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusAll">Toți</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="true"
+                                   id="statusActive" {% if is_active_filter == "true" %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusActive">
+                                <i class="bi bi-check-circle text-success"></i> Activi
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="false"
+                                   id="statusInactive" {% if is_active_filter == "false" %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="statusInactive">
+                                <i class="bi bi-x-circle text-danger"></i> Inactivi
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Căutare</label>
+                        <div class="input-group input-group-sm">
+                            <input type="search" name="search" class="form-control"
+                                   placeholder="Nume, email, telefon..."
+                                   value="{{ search_query or '' }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-grid">
+                        <a href="{{ dashboard_prefix }}/vendor" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-counterclockwise"></i> Resetează
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendor List -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-building text-primary me-2"></i>
+                    Listă Furnizori
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="50">ID</th>
+                                <th>Nume</th>
+                                <th>Contact</th>
+                                <th width="100" class="text-center">Produse</th>
+                                <th width="100" class="text-center">Status</th>
+                                <th width="150">Creat</th>
+                                <th width="120" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vendor in vendors %}
+                            <tr>
+                                <td><small class="text-muted">#{{ vendor.id }}</small></td>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/vendor/{{ vendor.id }}"
+                                       class="text-decoration-none text-dark fw-bold">
+                                        {{ vendor.name }}
+                                    </a>
+                                    {% if vendor.contact_person %}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person"></i> {{ vendor.contact_person }}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small><i class="bi bi-envelope"></i> {{ vendor.email }}</small><br>
+                                    <small><i class="bi bi-phone"></i> {{ vendor.phone }}</small>
+                                </td>
+                                <td class="text-center">
+                                    {% set products = vendor_products[vendor.id] %}
+                                    {% if products > 0 %}
+                                        <span class="badge bg-info">{{ products }}</span>
+                                    {% else %}
+                                        <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if vendor.is_active %}
+                                        <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ vendor.created_at|datetime_local }}</small></td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/vendor/{{ vendor.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if can_update(staff, 'vendor') %}
+                                        <a href="{{ dashboard_prefix }}/vendor/{{ vendor.id }}/edit"
+                                           class="btn btn-outline-secondary" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post"
+                                              action="{{ dashboard_prefix }}/vendor/{{ vendor.id }}/toggle-active"
+                                              style="display: inline;">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit"
+                                                    class="btn btn-outline-{{ 'danger' if vendor.is_active else 'success' }}"
+                                                    title="{% if vendor.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                                                <i class="bi bi-{{ 'x-circle' if vendor.is_active else 'check-circle' }}"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="bi bi-building fs-1"></i>
+                                    <p class="mt-2">Nu sunt furnizori înregistrați</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        <!-- Pagination code similar to other lists -->
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

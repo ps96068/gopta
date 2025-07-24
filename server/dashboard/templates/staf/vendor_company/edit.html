@@ -1,0 +1,127 @@
+<!-- templates/dashboard/staff/vendor_company/edit.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Editează {{ company.name }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="text-white mb-0">Editează {{ company.name }}</h2>
+                <a href="/dashboard/staff/vendor_company/{{ company.id }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Înapoi
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="/dashboard/staff/vendor_company/{{ company.id }}/edit">
+                        {{ csrf_input|safe }}
+                        <h5 class="mb-3">Date Companie</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nume Comercial <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required
+                                       value="{{ company.name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Denumire Juridică <span class="text-danger">*</span></label>
+                                <input type="text" name="legal_name" class="form-control" required
+                                       value="{{ company.legal_name }}">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">CUI/Cod Fiscal <span class="text-danger">*</span></label>
+                                <input type="text" name="tax_id" class="form-control" required
+                                       value="{{ company.tax_id }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Website</label>
+                                <input type="url" name="website" class="form-control"
+                                       value="{{ company.website or '' }}">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Date Contact</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Email <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" required
+                                       value="{{ company.email }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon <span class="text-danger">*</span></label>
+                                <input type="text" name="phone" class="form-control" required
+                                       value="{{ company.phone }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Adresă <span class="text-danger">*</span></label>
+                            <textarea name="address" class="form-control" rows="2" required>{{ company.address }}</textarea>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Date Bancare</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Cont Bancar</label>
+                                <input type="text" name="bank_account" class="form-control"
+                                       value="{{ company.bank_account or '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Denumire Bancă</label>
+                                <input type="text" name="bank_name" class="form-control"
+                                       value="{{ company.bank_name or '' }}">
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Setări Platformă</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comision Platformă (%) <span class="text-danger">*</span></label>
+                                <input type="number" name="commission_rate" class="form-control"
+                                       min="0" max="100" step="0.1" required
+                                       value="{{ company.commission_rate }}">
+                                <small class="text-muted">Procentul reținut din vânzări</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Termen Plată (zile) <span class="text-danger">*</span></label>
+                                <input type="number" name="payment_terms_days" class="form-control"
+                                       min="1" max="90" required
+                                       value="{{ company.payment_terms_days }}">
+                                <small class="text-muted">Zile până la plata facturilor</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descriere Companie</label>
+                            <textarea name="description" class="form-control" rows="3">{{ company.description or '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="/dashboard/staff/vendor_company/{{ company.id }}" class="btn btn-secondary">Anulează</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save me-2"></i>Salvează Modificări
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

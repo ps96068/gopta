@@ -1,0 +1,298 @@
+<!-- server/dashboard/templates/product_image/gallery.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}{{ page_title }} - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{{ dashboard_prefix }}/product" class="btn btn-sm btn-secondary">
+        <i class="bi bi-box-seam"></i> Produse
+    </a>
+    <a href="{{ dashboard_prefix }}/export?model=product_image" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stats Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="text-primary opacity-25 me-3">
+                                <i class="bi bi-images" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <div>
+                                <h6 class="text-muted mb-0">Total Imagini</h6>
+                                <h2 class="mb-0">{{ total_images }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <!-- Filters -->
+                        <form method="get" class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small">Categorie</label>
+                                <select name="category_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                                    <option value="">Toate categoriile</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Caută produs</label>
+                                <input type="search" name="search" class="form-control form-control-sm"
+                                       placeholder="Nume sau SKU..." value="{{ search_query or '' }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="bi bi-search"></i> Caută
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <a href="{{ dashboard_prefix }}/product_image" class="btn btn-light btn-sm w-100">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Products Gallery -->
+<div class="row g-3">
+    {% for product in products %}
+    {% set real_images = product.images|selectattr("image_path", "ne", default_image)|list %}
+    {% set has_only_default = product.images|length > 0 and real_images|length == 0 %}
+    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+        <div class="card product-card border-0 shadow-sm h-100" data-product-id="{{ product.id }}">
+            <!-- Product Header -->
+            <div class="card-header bg-white border-0 p-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-0 text-truncate" title="{{ product.name }}">{{ product.name }}</h6>
+                        <small class="text-muted"><code>{{ product.sku }}</code></small>
+                    </div>
+                    <span class="badge bg-{{ 'secondary' if has_only_default else 'info' }} ms-1">
+                        {{ real_images|length }}/4
+                    </span>
+                </div>
+            </div>
+
+            <!-- Primary Image Display -->
+            <div class="card-body p-2">
+                {% set primary_image = real_images|selectattr("is_primary", "equalto", true)|first %}
+                {% if not primary_image and real_images %}
+                    {% set primary_image = real_images[0] %}
+                {% endif %}
+
+                <div class="image-display {% if has_only_default %}no-real-image{% endif %}">
+                    {% if primary_image %}
+                        <img src="/{{ primary_image.image_path }}"
+                             alt="{{ primary_image.alt_text or product.name }}"
+                             class="img-fluid">
+                    {% elif has_only_default %}
+                        <img src="/{{ default_image }}"
+                             alt="{{ product.name }}"
+                             class="img-fluid default-image">
+                    {% else %}
+                        <div class="no-image">
+                            <i class="bi bi-image"></i>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Image Count Indicators -->
+                <div class="image-indicators">
+                    {% for i in range(4) %}
+                    <span class="indicator {% if i < real_images|length %}active{% endif %}"></span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Product Footer -->
+            <div class="card-footer bg-white border-0 p-2">
+                <div class="d-grid">
+                    <a href="{{ dashboard_prefix }}/product_image/product/{{ product.id }}"
+                       class="btn btn-sm btn-{{ 'success' if has_only_default else 'primary' }}">
+                        <i class="bi bi-{{ 'plus-circle' if has_only_default else 'images' }}"></i>
+                        {{ 'Adaugă imagini' if has_only_default else 'Gestionează' }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-images fs-1"></i>
+            <p class="mt-2">Nu sunt produse în această categorie</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page > 1 %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page - 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <li class="page-item active">
+                <span class="page-link">{{ p }}</span>
+            </li>
+            {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ p }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ p }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page + 1 }}{% if category_filter %}&category_id={{ category_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-card {
+    transition: transform 0.2s;
+    font-size: 0.875rem;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+}
+
+.image-display {
+    position: relative;
+    aspect-ratio: 1;
+    background: #f8f9fa;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.image-display img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-display.no-real-image {
+    opacity: 0.7;
+    border: 2px dashed #dee2e6;
+}
+
+.default-image {
+    padding: 20%;
+}
+
+.no-image {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dee2e6;
+    font-size: 2rem;
+}
+
+.image-indicators {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #dee2e6;
+}
+
+.indicator.active {
+    background: #0d6efd;
+}
+
+.card-header h6 {
+    font-size: 0.875rem;
+}
+
+.card-header .badge {
+    font-size: 0.625rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fix pentru filtrul de categorii
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.querySelector('select[name="category_id"]');
+    const form = categorySelect.closest('form');
+
+    // Override submit pentru a curăța parametrii goi
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData) {
+            if (value && value.trim() !== '') {
+                params.append(key, value);
+            }
+        }
+
+        const queryString = params.toString();
+        const newUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        window.location.href = newUrl;
+    });
+
+    // Fix și pentru change event
+    categorySelect.addEventListener('change', function(e) {
+        const form = this.closest('form');
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData) {
+            if (value && value.trim() !== '') {
+                params.append(key, value);
+            }
+        }
+
+        const queryString = params.toString();
+        const newUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        window.location.href = newUrl;
+    });
+});
+</script>
+{% endblock %}

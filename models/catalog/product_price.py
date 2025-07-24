@@ -1,56 +1,50 @@
-from __future__ import annotations
-
-import enum
-from datetime import datetime
-from decimal import Decimal
-from sqlalchemy import Enum, Integer, String, ForeignKey, Numeric, DateTime, UniqueConstraint, Index
-from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
-from sqlalchemy.sql import func
-
-
-from cfg import Base
-from models.base import CreatedAtMixin
-
-
-
-
 # models/catalog/product_price.py
+"""
+ProductPrice model pentru prețurile produselor.
+
+Fiecare produs are exact un set de prețuri active cu 4 nivele:
+- anonim: pentru vizitatori neînregistrați
+- user: pentru clienți înregistrați
+- instalator: pentru instalatori (setat manual de staff)
+- pro: pentru profesioniști (setat manual de staff)
+
+Business Rules:
+- Un produs are un singur set de prețuri activ
+- Toate cele 4 prețuri sunt obligatorii
+- TVA este inclus în preț (doar informativ)
+- Prețurile sunt afișate condiționat pe front bazat pe price_type al clientului
+- În MVP nu păstrăm istoric prețuri
+"""
+
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
+from sqlalchemy import Enum as SQLAlchemyEnum
+
+from sqlalchemy import Numeric, String, Boolean, ForeignKey, Integer, UniqueConstraint, CheckConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+
+from cfg import Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin
+from models.enum import PriceType
+
+if TYPE_CHECKING:
+    from models import Product
 
 
-class PriceType(enum.Enum):
-    anonim = "anonim"
-    user = "user"
-    instalator = "instalator"
-    pro = "pro"
-
-
-class ProductPrice(Base, CreatedAtMixin):
+class ProductPrice(Base, CreatedAtMixin, UpdatedAtMixin, IsActiveMixin):
+    """Model pentru prețurile produselor pe grile."""
     __tablename__ = "product_prices"
-    __table_args__ = (
-        UniqueConstraint('product_id', 'price_type', name='uix_product_price_type'),
-    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    author_id: Mapped[int] = mapped_column(ForeignKey("staff.id"), nullable=False)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
-    price_type: Mapped[PriceType] = mapped_column(Enum(PriceType), nullable=False)
 
-    price_usd: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    price_mdl: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    rate_used: Mapped[Decimal] = mapped_column(Numeric(10, 4), nullable=False)
+    price_type: Mapped[PriceType] = mapped_column(SQLAlchemyEnum(PriceType), nullable=False)
+    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
-    # Relații
-    histories: Mapped[list["ProductPriceHistory"]] = relationship("ProductPriceHistory", back_populates="price")
-
-    product_price_author: Mapped["Staff"] = relationship("Staff", foreign_keys=[author_id],
-                                                         back_populates="product_prices")
-    product: Mapped["Product"] = relationship("Product", back_populates="prices")
+    # Valută (pentru extindere viitoare)
+    currency: Mapped[str] = mapped_column(String(3), default="MDL", nullable=False)
 
 
+    # Relationships
+    product: Mapped["Product"] = relationship(back_populates="prices")
 
 
-    @validates("price_usd", "price_mdl", "rate_used")
-    def validate_price(self, key, value: Decimal):
-        if value < 0:
-            raise ValueError("Prețul trebuie să fie pozitiv.")
-        return value

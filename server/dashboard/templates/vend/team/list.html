@@ -1,0 +1,223 @@
+{% extends "base_vendor.html" %}
+
+{% block header_title %}
+Echipa Mea
+<span class="badge bg-secondary ms-2">{{ total_members }}</span>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mt-2">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ dashboard_prefix }}/home">Dashboard</a></li>
+        <li class="breadcrumb-item active">Echipa</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<!-- Flash Messages -->
+{% if request.query_params.get('success') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {% if request.query_params.get('success') == 'member_added' %}
+            Membru adăugat cu succes!
+        {% elif request.query_params.get('success') == 'status_updated' %}
+            Status actualizat cu succes!
+        {% elif request.query_params.get('success') == 'member_deleted' %}
+            Membru șters cu succes!
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endif %}
+
+{% if request.query_params.get('error') %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {% if request.query_params.get('error') == 'cannot_deactivate_self' %}
+            Nu vă puteți dezactiva propriul cont!
+        {% elif request.query_params.get('error') == 'cannot_delete_self' %}
+            Nu vă puteți șterge propriul cont!
+        {% elif request.query_params.get('error') == 'need_at_least_one_admin' %}
+            Trebuie să existe cel puțin un administrator activ!
+        {% elif request.query_params.get('error') == 'email_exists' %}
+            Această adresă de email există deja!
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Membri</h6>
+                        <h3 class="mb-0">{{ total_members }}</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-people fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Administratori</h6>
+                        <h3 class="mb-0">{{ admin_count }}</h3>
+                    </div>
+                    <div class="text-danger">
+                        <i class="bi bi-shield-check fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Membri Activi</h6>
+                        <h3 class="mb-0 text-success">{{ active_count }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-person-check fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Bar -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0">Membri Echipă</h5>
+    <a href="{{ dashboard_prefix }}/team/create" class="btn btn-primary">
+        <i class="bi bi-person-plus me-2"></i>Adaugă Membru
+    </a>
+</div>
+
+<!-- Team Members Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if team_members %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nume</th>
+                        <th>Email</th>
+                        <th>Telefon</th>
+                        <th>Rol</th>
+                        <th>Ultima Autentificare</th>
+                        <th>Status</th>
+                        <th width="150">Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in team_members %}
+                    <tr {% if member.id == current_user_id %}class="table-info"{% elif not member.is_active %}class="table-secondary opacity-75"{% endif %}>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-person-circle fs-4 me-2"></i>
+                                <div>
+                                    <div>{{ member.first_name }} {{ member.last_name }}</div>
+                                    {% if member.id == current_user_id %}
+                                    <small class="text-muted">(Tu)</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ member.email }}</td>
+                        <td>{{ member.phone or '-' }}</td>
+                        <td>
+                            {% if member.role.value == 'admin' %}
+                                <span class="badge bg-danger">Admin</span>
+                            {% else %}
+                                <span class="badge bg-info">Manager</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member.last_login %}
+                                {{ member.last_login|datetime_local }}
+                            {% else %}
+                                <span class="text-muted">Niciodată</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member.is_active %}
+                                <span class="badge bg-success">Activ</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactiv</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if member.id != current_user_id %}
+                            <div class="btn-group btn-group-sm">
+                                <form action="{{ dashboard_prefix }}/team/{{ member.id }}/toggle-active"
+                                      method="post" class="d-inline">
+                                    {{ csrf_input|safe }}
+                                    <button type="submit"
+                                            class="btn {% if member.is_active %}btn-outline-secondary{% else %}btn-outline-success{% endif %}"
+                                            title="{% if member.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                                        {% if member.is_active %}
+                                            <i class="bi bi-toggle-on"></i>
+                                        {% else %}
+                                            <i class="bi bi-toggle-off"></i>
+                                        {% endif %}
+                                    </button>
+                                    <button type="submit"
+                                            class="btn btn-outline-danger"
+                                            title="Șterge permanent">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+
+<!--                                {% if not member.is_active %}-->
+<!--                                <form action="{{ dashboard_prefix }}/team/{{ member.id }}/delete"-->
+<!--                                      method="post"-->
+<!--                                      class="d-inline"-->
+<!--                                      onsubmit="return confirm('Sigur doriți să ștergeți permanent acest membru?');">-->
+<!--                                    {{ csrf_input|safe }}-->
+<!--                                    <button type="submit"-->
+<!--                                            class="btn btn-outline-danger"-->
+<!--                                            title="Șterge permanent">-->
+<!--                                        <i class="bi bi-trash"></i>-->
+<!--                                    </button>-->
+<!--                                </form>-->
+<!--                                {% endif %}-->
+                            </div>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-people fs-1 text-muted"></i>
+            <p class="text-muted mt-2">Nu există membri în echipă</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Alert -->
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Notă:</strong>
+    <ul class="mb-0 mt-2">
+        <li>Membrii dezactivați nu se pot autentifica dar rămân vizibili în listă</li>
+        <li>Puteți reactiva un membru dezactivat oricând</li>
+        <li>Ștergerea permanentă este disponibilă doar pentru membri dezactivați</li>
+        <li>Trebuie să existe întotdeauna cel puțin un administrator activ</li>
+    </ul>
+</div>
+{% endblock %}

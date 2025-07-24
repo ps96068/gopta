@@ -1,0 +1,383 @@
+<!-- server/dashboard/templates/staf/product/list.html -->
+{% extends "base_staff.html" %}
+
+{% block title %}Produse - {{ dashboard_title }}{% endblock %}
+
+{% block page_title %}Produse{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+
+    {#
+        {{ staff }}
+        {{ staff.role.value }}
+    #}
+    {{ user_type }}
+
+{{ can_create(user_type, 'product') }}
+
+
+    {% if can_create(staff, 'product') %}
+    <a href="{{ url_for('dashboard_root') }}product/create" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-circle"></i> Produs Nou
+    </a>
+    {% endif %}
+    <a href="{{ dashboard_prefix }}/import?model=product" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-upload"></i> Import
+    </a>
+    <a href="{{ dashboard_prefix }}/export?model=product" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-download"></i> Export
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Alerts -->
+{% if request.query_params.get('success') == 'created' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Produs nou creat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'status_toggled' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Status produs actualizat cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if request.query_params.get('success') == 'deleted' %}
+<div class="alert alert-success alert-dismissible fade show">
+    <i class="bi bi-check-circle me-2"></i>
+    Produs șters cu succes!
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Total Produse</h6>
+                        <h1 class="mb-0 text-primary">{{ total_products }}</h1>
+                    </div>
+                    <div class="text-primary opacity-25">
+                        <i class="bi bi-box-seam" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Produse Active</h6>
+                        <h1 class="mb-0 text-success">{{ active_products }}</h1>
+                    </div>
+                    <div class="text-success opacity-25">
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success"
+                             style="width: {{ (active_products / total_products * 100) if total_products > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-muted mb-1">Produse Inactive</h6>
+                        <h1 class="mb-0 text-danger">{{ inactive_products }}</h1>
+                    </div>
+                    <div class="text-danger opacity-25">
+                        <i class="bi bi-x-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+    <!-- Filters -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel text-primary me-2"></i>
+                    Filtre
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    <!-- Search -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Căutare</label>
+                        <input type="search" name="search" class="form-control form-control-sm"
+                               placeholder="Nume, SKU, descriere..."
+                               value="{{ search_query or '' }}">
+                    </div>
+
+                    <!-- Category -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Categorie</label>
+                        <select name="category_id" class="form-select form-select-sm">
+                            <option value="">Toate categoriile</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Vendor -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Furnizor</label>
+                        <select name="vendor_id" class="form-select form-select-sm">
+                            <option value="">Toți furnizorii</option>
+                            {% for vendor in vendors %}
+                            <option value="{{ vendor.id }}" {% if vendor_filter == vendor.id %}selected{% endif %}>
+                                {{ vendor.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value=""
+                                   id="statusAll" {% if not is_active_filter %}checked{% endif %}>
+                            <label class="form-check-label" for="statusAll">Toate</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="true"
+                                   id="statusActive" {% if is_active_filter == "true" %}checked{% endif %}>
+                            <label class="form-check-label" for="statusActive">
+                                <i class="bi bi-check-circle text-success"></i> Active
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="is_active" value="false"
+                                   id="statusInactive" {% if is_active_filter == "false" %}checked{% endif %}>
+                            <label class="form-check-label" for="statusInactive">
+                                <i class="bi bi-x-circle text-danger"></i> Inactive
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="bi bi-search"></i> Aplică
+                        </button>
+                        <a href="{{ dashboard_prefix }}/product" class="btn btn-light btn-sm">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products List -->
+    <div class="col-lg-9">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam text-primary me-2"></i>
+                        Listă Produse
+                    </h5>
+                    <small class="text-muted">
+                        {{ (page - 1) * per_page + 1 }} - {{ [page * per_page, total]|min }} din {{ total }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th width="60"></th>
+                                <th>SKU</th>
+                                <th>Produs</th>
+                                <th>Categorie</th>
+                                <th>Furnizor</th>
+                                <th width="300" class="text-center">Prețuri (MDL)</th>
+                                <th width="80" class="text-center">Status</th>
+                                <th width="120" class="text-center">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    <img src="/{{ product_images[product.id] }}"
+                                         alt="{{ product.name }}"
+                                         class="product-avatar">
+                                </td>
+                                <td>
+                                    <code>{{ product.sku }}</code>
+                                </td>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/product/{{ product.id }}"
+                                       class="text-decoration-none text-dark fw-bold">
+                                        {{ product.name }}
+                                    </a>
+                                    {% if product.short_description %}
+                                    <br>
+                                    <small class="text-muted">{{ product.short_description|truncate(50) }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ dashboard_prefix }}/category/{{ product.category.id }}">
+                                        {{ product.category.name }}
+                                    </a>
+                                </td>
+                                <td>{{ product.vendor_company.name }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-between small">
+                                        <div class="text-center">
+                                            <div class="text-muted">Anonim</div>
+                                            <strong>{{ product_prices[product.id].get('anonim', 0)|int }}</strong>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-muted">User</div>
+                                            <strong>{{ product_prices[product.id].get('user', 0)|int }}</strong>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-muted">Instalator</div>
+                                            <strong>{{ product_prices[product.id].get('instalator', 0)|int }}</strong>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-muted">Pro</div>
+                                            <strong>{{ product_prices[product.id].get('pro', 0)|int }}</strong>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% if product.is_active %}
+                                        <span class="badge bg-success">Activ</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactiv</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ dashboard_prefix }}/product/{{ product.id }}"
+                                           class="btn btn-outline-primary" title="Vezi detalii">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        {% if can_update(staff, 'product') %}
+                                        <a href="{{ dashboard_prefix }}/product/{{ product.id }}/edit"
+                                           class="btn btn-outline-secondary" title="Editează">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form method="post"
+                                              action="{{ dashboard_prefix }}/product/{{ product.id }}/toggle-active"
+                                              style="display: inline;">
+                                            {{ csrf_input|safe }}
+                                            <button type="submit"
+                                                    class="btn btn-outline-{{ 'danger' if product.is_active else 'success' }} btn-sm"
+                                                    title="{% if product.is_active %}Dezactivează{% else %}Activează{% endif %}">
+                                                <i class="bi bi-{{ 'x-circle' if product.is_active else 'check-circle' }}"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="bi bi-box fs-1"></i>
+                                    <p class="mt-2">Nu sunt produse</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page - 1 }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p == page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ p }}</span>
+                            </li>
+                            {% elif p == 1 or p == total_pages or (p > page - 3 and p < page + 3) %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ p }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">{{ p }}</a>
+                            </li>
+                            {% elif p == page - 3 or p == page + 3 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page + 1 }}{% if request.query_string %}&{{ request.query_string.decode() }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.product-avatar {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+}
+
+.table th {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

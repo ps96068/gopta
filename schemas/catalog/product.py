@@ -1,37 +1,102 @@
-from __future__ import annotations
-
-from datetime import date, datetime
+# schemas/catalog/product.py
+from datetime import datetime
+from typing import Optional, List, Dict
 from decimal import Decimal
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from pydantic import BaseModel, Field
 
+from models import UserStatus
 
 
 class ProductBase(BaseModel):
-    cod_produs: int | None = None
-    name: str
-    description: str | None = None
-    datasheet_url: str | None = None
-    category_id: int | None = None
-    is_active: bool = True
-    publish_date: datetime | None = None
+    """Schema de bază pentru Product."""
+    name: str = Field(..., min_length=3, max_length=255)
+    description: Optional[str] = None
+    short_description: Optional[str] = Field(None, max_length=500)
+    in_stock: bool = Field(default=True)
+    stock_quantity: Optional[int] = Field(default=0, ge=0)
+    meta_title: Optional[str] = Field(None, max_length=255)
+    meta_description: Optional[str] = Field(None, max_length=500)
+    sort_order: int = Field(default=0, ge=0)
+
 
 class ProductCreate(ProductBase):
-    pass
+    """Schema pentru creare produs."""
+    vendor_id: int = Field(..., gt=0)
+    category_id: int = Field(..., gt=0)
+    slug: str = Field(..., pattern=r'^[a-z0-9\-]+$')
+    sku: str = Field(..., min_length=3, max_length=100)
+
+    @field_validator('sku')
+    def validate_sku(cls, v):
+        """Validează SKU format."""
+        return v.upper().strip()
+
+    @field_validator('slug')
+    def validate_slug(cls, v):
+        """Validează slug format."""
+        return v.lower().strip()
+
 
 class ProductUpdate(BaseModel):
-    cod_produs: int | None = None
-    name: str | None = None
-    description: str | None = None
-    datasheet_url: str | None = None
-    category_id: int | None = None
-    is_active: bool | None = None
-    publish_date: datetime | None = None
+    """Schema pentru actualizare produs."""
+    name: Optional[str] = Field(None, min_length=3, max_length=255)
+    category_id: Optional[int] = Field(None, gt=0)
+    description: Optional[str] = None
+    short_description: Optional[str] = Field(None, max_length=500)
+    in_stock: Optional[bool] = None
+    stock_quantity: Optional[int] = Field(None, ge=0)
+    meta_title: Optional[str] = Field(None, max_length=255)
+    meta_description: Optional[str] = Field(None, max_length=500)
+    sort_order: Optional[int] = Field(None, ge=0)
 
-class ProductRead(ProductBase):
+
+class ProductImageResponse(BaseModel):
+    """Schema pentru răspuns imagine produs."""
     id: int
+    image_path: str
+    file_name: str
+    file_size: int
+    alt_text: Optional[str]
+    is_primary: bool
+    sort_order: int
     created_at: datetime
-    updated_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductResponse(ProductBase):
+    """Schema pentru răspuns produs."""
+    id: int
+    vendor_id: int
+    vendor_name: Optional[str] = None
+    category_id: int
+    category_name: Optional[str] = None
+    slug: str
+    sku: str
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool
+    images: List[ProductImageResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductListResponse(BaseModel):
+    """Schema pentru listă produse cu paginare."""
+    items: List[ProductResponse]
+    total: int
+    page: int = 1
+    per_page: int = 20
+
+
+class ProductSearchParams(BaseModel):
+    """Schema pentru parametri căutare produse."""
+    query: Optional[str] = Field(None, min_length=2)
+    category_id: Optional[int] = None
+    vendor_id: Optional[int] = None
+    in_stock_only: bool = True
+    sort_by: str = Field(default="sort_order", pattern=r'^(name|created_at|sort_order)$')
+    sort_desc: bool = False
+    page: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
